@@ -1,0 +1,172 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import { site } from "../site.config";
+
+const webAppSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "@id": `${site.url}/app#webapp`,
+  name: site.name,
+  url: `${site.url}/app/`,
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Any (Chrome, Edge, Firefox, Safari)",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  publisher: { "@id": `${site.url}/#organization` },
+};
+---
+
+<Layout
+  title="Compress Video — Shrink for WhatsApp, Email & Discord"
+  description="Compress a video file right in your browser. Pick a target size, download a smaller MP4. Your video never uploads — it's processed entirely on your device."
+  path="/app/"
+  jsonLd={[webAppSchema]}
+>
+  <Header />
+
+  <main class="mx-auto max-w-[920px] px-4 md:px-8 py-8 md:py-10">
+    <header class="mb-6 text-center">
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">Compress a video</h1>
+      <p class="mt-2 text-sm md:text-base text-[var(--color-fg-muted)]">
+        Shrink any video for WhatsApp, email or Discord.
+        <span class="text-[var(--color-fg)] font-medium">Your video never uploads</span> —
+        it's compressed right here on your device.
+      </p>
+    </header>
+
+    {/* ============ INTRO / dropzone ============ */}
+    <section id="cvf-intro">
+      <div
+        id="cvf-dropzone"
+        class="cvf-dropzone flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl px-6 py-14 text-center"
+        role="button"
+        tabindex="0"
+        aria-label="Choose or drop a video file"
+      >
+        <span
+          class="inline-flex size-12 items-center justify-center rounded-full text-[var(--color-accent)]"
+          style="background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);"
+          aria-hidden="true"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+        </span>
+        <div>
+          <p class="text-base font-semibold text-[var(--color-fg)]">Drop a video here</p>
+          <p class="mt-1 text-sm text-[var(--color-fg-muted)]">or</p>
+        </div>
+        <button id="cvf-pick" type="button" class="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90">
+          Choose a video
+        </button>
+        <p class="mt-1 text-xs text-[var(--color-fg-subtle)]">MP4, MOV, WebM, MKV, AVI · nothing is uploaded</p>
+        <input id="cvf-file" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.m4v" class="hidden" />
+      </div>
+
+      <p class="mt-4 text-center text-xs text-[var(--color-fg-subtle)]">
+        Processed on your device with WebAssembly. The only thing fetched from the
+        network is the compressor itself — never your video.
+      </p>
+    </section>
+
+    {/* ============ SETUP (after a file is chosen) ============ */}
+    <section id="cvf-setup" class="hidden">
+      <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 md:p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p id="cvf-orig-name" class="truncate text-sm font-semibold text-[var(--color-fg)]">video.mp4</p>
+            <p id="cvf-orig-meta" class="mt-0.5 text-xs text-[var(--color-fg-muted)]">—</p>
+          </div>
+          <button id="cvf-again-top" type="button" class="hidden"></button>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <h2 class="text-sm font-semibold text-[var(--color-fg)]">Compress for…</h2>
+        <p class="text-xs text-[var(--color-fg-muted)]">Pick where you're sending it — we'll target that size.</p>
+        <div id="cvf-presets" class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5"></div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <div class="flex items-center justify-between text-xs font-medium text-[var(--color-fg-muted)]">
+            <label for="cvf-custom">Or set a custom target size</label>
+            <span id="cvf-custom-val" class="tabular-nums text-[var(--color-fg)]">25 MB</span>
+          </div>
+          <input id="cvf-custom" class="cvf-range mt-2" type="range" min="2" max="500" step="1" value="25" />
+        </div>
+        <div>
+          <label for="cvf-res" class="block text-xs font-medium text-[var(--color-fg-muted)]">Resolution</label>
+          <select id="cvf-res" class="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)] outline-none focus:border-[var(--color-accent)]">
+            <option value="keep">Keep original</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+          </select>
+        </div>
+      </div>
+
+      <p id="cvf-estimate" class="mt-4 text-xs text-[var(--color-fg-subtle)]"></p>
+      <p id="cvf-warn" class="mt-2 hidden rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-xs text-[var(--color-warning)]"></p>
+
+      <div class="mt-6 flex flex-wrap items-center gap-3">
+        <button id="cvf-compress" type="button" class="rounded-lg bg-[var(--color-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90">
+          Compress video
+        </button>
+        <button id="cvf-again" type="button" class="rounded-lg border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+          Choose a different video
+        </button>
+      </div>
+    </section>
+
+    {/* ============ WORKING ============ */}
+    <section id="cvf-working" class="hidden">
+      <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6 md:p-8">
+        <div class="flex items-center gap-3">
+          <span class="cvf-spinner" aria-hidden="true"></span>
+          <p class="text-sm font-semibold text-[var(--color-fg)]">Compressing…</p>
+          <span id="cvf-progress-pct" class="ml-auto text-sm font-semibold tabular-nums text-[var(--color-accent-strong)]"></span>
+        </div>
+        <div class="cvf-progress-track mt-4"><div id="cvf-progress" class="cvf-progress-fill is-indeterminate"></div></div>
+        <p id="cvf-work-status" class="mt-3 text-xs text-[var(--color-fg-muted)]">Starting…</p>
+        <button id="cvf-cancel" type="button" class="mt-5 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+          Cancel
+        </button>
+      </div>
+    </section>
+
+    {/* ============ RESULT ============ */}
+    <section id="cvf-result" class="hidden">
+      <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5 md:p-6">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-fg-subtle)]">Done</p>
+            <p id="cvf-reduce" class="mt-1 text-3xl font-bold tracking-tight text-[var(--color-success)]">— smaller</p>
+            <p class="mt-1 text-sm text-[var(--color-fg-muted)]">
+              <span id="cvf-size-before" class="line-through">—</span>
+              <span class="mx-1.5">→</span>
+              <span id="cvf-size-after" class="font-semibold text-[var(--color-fg)]">—</span>
+            </p>
+          </div>
+          <a id="cvf-download" class="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90" download>
+            Download
+          </a>
+        </div>
+
+        <video id="cvf-result-video" controls playsinline class="mt-5 max-h-[420px] w-full rounded-lg bg-black"></video>
+
+        <p id="cvf-result-hint" class="mt-4 text-sm text-[var(--color-fg-muted)]"></p>
+
+        <button id="cvf-again2" type="button" class="mt-5 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+          Compress another video
+        </button>
+      </div>
+      <p class="mt-4 text-center text-xs text-[var(--color-fg-subtle)]">
+        Your video was processed entirely on your device. It was never uploaded.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    import { initCompressor } from "../lib/compressor";
+    initCompressor();
+  </script>
+</Layout>
