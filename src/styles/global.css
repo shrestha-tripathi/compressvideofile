@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/*
+  Compress Video File — design tokens (Tailwind v4 @theme, NO tailwind.config.js).
+  Both light + dark themes are mandatory. Dark follows prefers-color-scheme.
+
+  ⚠️ Tailwind v4 trap (SCAFFOLD_BIBLE TRAP #2): `@theme` must NOT be nested
+  inside `@media`. Tailwind hoists any @theme block to :root unconditionally, so
+  a nested dark @theme silently OVERWRITES the light tokens (dark-only site,
+  light mode impossible — invisible until a light-mode user loads it).
+  Correct pattern: light/default tokens in @theme; dark overrides in a PLAIN
+  `:root` rule inside @media (regular CSS custom-property overrides, not @theme).
+  Every component references these via var(--color-*), so overriding the var on
+  :root inside the media query flips the whole site correctly.
+
+  Brand accent = a confident blue (compression / motion / trust). Surfaces stay
+  near-neutral so the video preview (the real content) reads cleanly.
+*/
+@theme {
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f7f8fa;
+  --color-bg-muted: #eef0f4;
+  --color-fg: #0a0a0a;
+  --color-fg-muted: #4b5563;
+  --color-fg-subtle: #6b7280;
+  --color-border: #e3e6eb;
+  --color-border-strong: #d1d5db;
+
+  --color-accent: #2563eb;        /* blue-600 */
+  --color-accent-strong: #1d4ed8; /* blue-700 */
+  --color-accent-fg: #ffffff;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
+/* Dark theme — plain :root override (NOT @theme — see trap note above). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0a0a0a;
+    --color-bg-subtle: #131417;
+    --color-bg-muted: #1d1f24;
+    --color-fg: #fafafa;
+    --color-fg-muted: #a1a7b3;
+    --color-fg-subtle: #8a90a0;
+    --color-border: #292c33;
+    --color-border-strong: #3a3e47;
+
+    --color-accent: #60a5fa;        /* blue-400 — lifts on dark */
+    --color-accent-strong: #93c5fd; /* blue-300 */
+    --color-accent-fg: #07121f;
+
+    --color-success: #34d399;
+    --color-warning: #fbbf24;
+    --color-danger: #f87171;
+
+    color-scheme: dark;
+  }
+}
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-weight: 600;
+}
+
+/* Anchors inherit color by default; prose links are colored via Prose.astro. */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   /app — drop zone
+   ============================================================
+   The drag-and-drop target. JS toggles .is-dragover on dragenter / removes it
+   on dragleave + drop. Pure CSS handles the visual feedback. Both themes.
+*/
+.cvf-dropzone {
+  border: 2px dashed var(--color-border-strong);
+  background-color: var(--color-bg-subtle);
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.15s ease;
+}
+.cvf-dropzone:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border-strong));
+  background-color: color-mix(in srgb, var(--color-accent) 4%, var(--color-bg-subtle));
+}
+.cvf-dropzone.is-dragover {
+  border-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-accent) 14%, transparent);
+  transform: scale(1.004);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cvf-dropzone.is-dragover { transform: none; }
+}
+
+/* ============================================================
+   /app — progress bar
+   ============================================================ */
+.cvf-progress-track {
+  height: 0.625rem;
+  border-radius: 999px;
+  background-color: var(--color-bg-muted);
+  overflow: hidden;
+}
+.cvf-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent) 0%,
+    var(--color-accent-strong) 100%
+  );
+  width: 0%;
+  transition: width 0.25s ease;
+}
+/* Indeterminate stripes while ffmpeg loads / before first progress tick. */
+.cvf-progress-fill.is-indeterminate {
+  width: 35% !important;
+  background-image: linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--color-accent-fg) 25%, transparent) 25%,
+    transparent 25%,
+    transparent 50%,
+    color-mix(in srgb, var(--color-accent-fg) 25%, transparent) 50%,
+    color-mix(in srgb, var(--color-accent-fg) 25%, transparent) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+  animation: cvf-stripes 0.7s linear infinite,
+    cvf-indeterminate 1.4s ease-in-out infinite;
+}
+@keyframes cvf-stripes {
+  from { background-position: 0 0; }
+  to { background-position: 1rem 0; }
+}
+@keyframes cvf-indeterminate {
+  0% { margin-left: 0%; width: 25%; }
+  50% { margin-left: 60%; width: 40%; }
+  100% { margin-left: 100%; width: 10%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cvf-progress-fill.is-indeterminate {
+    animation: none;
+    width: 100% !important;
+    opacity: 0.6;
+  }
+}
+
+/* ============================================================
+   /app — range slider (custom target-size control), both themes
+   ============================================================ */
+.cvf-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-bg-muted);
+  outline: none;
+  cursor: pointer;
+}
+.cvf-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.cvf-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Thin spinner used in the "loading compressor" + working states. */
+.cvf-spinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+  border-top-color: var(--color-accent);
+  animation: cvf-spin 0.7s linear infinite;
+}
+@keyframes cvf-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cvf-spinner { animation-duration: 1.4s; }
+}

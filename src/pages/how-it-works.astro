@@ -1,0 +1,147 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { site } from "../site.config";
+---
+
+<Layout
+  title="How browser-based video compression works"
+  description={`How ${site.name} shrinks video entirely in your browser with ffmpeg.wasm — the WebAssembly engine, the bitrate math behind the size presets, why your video never uploads, and how H.264 output keeps it playable everywhere.`}
+  path="/how-it-works/"
+>
+  <Header />
+
+  <main class="mx-auto max-w-[820px] px-4 sm:px-6 py-16 md:py-24">
+    <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">How it works</p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-semibold tracking-tight">
+      Compression that happens on your device
+    </h1>
+    <p class="mt-6 text-lg text-[var(--color-fg-muted)]">
+      A plain-English walkthrough of how {site.name} turns a big video into a
+      small one — entirely inside your browser, without ever uploading your file.
+    </p>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
+    <!-- THE THREE STEPS -->
+    <section class="space-y-6">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
+        The flow, in three steps
+      </h2>
+      <ol class="space-y-5">
+        {[
+          { n: "1", t: "You drop a video in", b: "When you pick or drag a file, your browser reads it straight from disk into memory. We read its metadata — dimensions, duration, size — with a quick hidden <video> element. No bytes go to a server." },
+          { n: "2", t: "You choose a target size", b: "Pick a preset (WhatsApp 16 MB, Email 25 MB, Discord, Discord Nitro 500 MB…) or set a custom size and resolution. We convert that into a precise video bitrate the encoder should aim for." },
+          { n: "3", t: "It compresses, locally", b: "A WebAssembly build of ffmpeg re-encodes the video to H.264/AAC at that bitrate, showing a real progress bar. When it's done, you preview and download. The original and the result both stay in your browser's memory." },
+        ].map((s) => (
+          <li class="flex gap-4">
+            <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-accent)] text-sm font-semibold text-[var(--color-accent-fg)]">
+              {s.n}
+            </span>
+            <div>
+              <h3 class="text-lg font-semibold text-[var(--color-fg)]">{s.t}</h3>
+              <p class="mt-1.5 leading-relaxed text-[var(--color-fg-muted)]" set:html={s.b} />
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
+    <!-- THE ENGINE -->
+    <section class="space-y-5 leading-relaxed text-[var(--color-fg-muted)]">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
+        The engine: ffmpeg, compiled to WebAssembly
+      </h2>
+      <p>
+        ffmpeg is the industry-standard video tool that powers most of the
+        encoders you've ever used. Normally it runs on a server. We use
+        <strong class="text-[var(--color-fg)]">ffmpeg.wasm</strong> — the same
+        ffmpeg compiled to WebAssembly so it runs <em>inside your browser tab</em>.
+        That's the unlock: a real, full-strength video encoder with no server.
+      </p>
+      <p>
+        The first time you compress something, the browser downloads the
+        compressor's code (a one-time ~25 MB WebAssembly binary) from a CDN and
+        caches it. To be clear about what crosses the network:
+        <strong class="text-[var(--color-fg)]">the code comes down; your video never goes up.</strong>
+        After that first load it's cached, so repeat compressions — and even
+        offline use — work without touching the network at all.
+      </p>
+      <p>
+        Where your browser supports it, we load the
+        <strong class="text-[var(--color-fg)]">multithreaded</strong> build of the
+        encoder (using all your CPU cores for speed). That needs a browser
+        feature called SharedArrayBuffer, which is why this site sends special
+        cross-origin-isolation headers. If those aren't available, we
+        automatically fall back to the single-threaded build — slower, but it
+        still works everywhere.
+      </p>
+    </section>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
+    <!-- THE BITRATE MATH -->
+    <section class="space-y-5 leading-relaxed text-[var(--color-fg-muted)]">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
+        The math behind hitting a target size
+      </h2>
+      <p>
+        A video file's size is basically its <em>bitrate</em> (bits per second)
+        multiplied by its <em>duration</em>. So to hit a target size, we work
+        backwards from how many seconds long your clip is:
+      </p>
+      <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5 font-mono text-sm text-[var(--color-fg)]">
+        <p>total_kbps = (target_MB × 8192) ÷ duration_sec</p>
+        <p class="mt-1">video_kbps = max(total_kbps − 128, floor)</p>
+      </div>
+      <p>
+        We reserve 128 kbps for AAC audio and give the rest to the video stream,
+        clamped to a sensible minimum so the result never turns to mush. If your
+        target is implausibly small for a long clip, the app warns you before
+        encoding instead of producing an unwatchable file. Then ffmpeg encodes
+        with H.264 (<code class="font-mono text-[var(--color-fg)]">libx264</code>),
+        a matching <code class="font-mono text-[var(--color-fg)]">-maxrate</code>/<code class="font-mono text-[var(--color-fg)]">-bufsize</code>,
+        optional downscaling, and <code class="font-mono text-[var(--color-fg)]">-movflags +faststart</code>
+        so the file streams instantly.
+      </p>
+    </section>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
+    <!-- PRIVACY -->
+    <section class="space-y-5 leading-relaxed text-[var(--color-fg-muted)]">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
+        Why “never uploads” is true, not marketing
+      </h2>
+      <p>
+        Most online video compressors upload your file to a server, compress it
+        there, and hand back a download. Your personal video then sits on a
+        machine you don't control. {site.name} is built the opposite way: the
+        encoder runs in your browser, so
+        <strong class="text-[var(--color-fg)]">there is no upload step at all</strong>.
+        The only network request is for the encoder's own code — and you can
+        verify that in your browser's Network tab: you'll see the wasm download,
+        and you'll never see your video go out.
+      </p>
+    </section>
+
+    <div class="mt-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6 md:p-8">
+      <h2 class="text-xl md:text-2xl font-semibold text-[var(--color-fg)]">See it for yourself</h2>
+      <p class="mt-3 text-[var(--color-fg-muted)]">
+        Drop in a clip and watch the progress bar move — no upload, no waiting on
+        a server queue.
+      </p>
+      <a
+        href="/app/"
+        class="mt-6 inline-flex h-10 items-center rounded-md bg-[var(--color-accent)] px-5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+      >
+        Compress a video →
+      </a>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

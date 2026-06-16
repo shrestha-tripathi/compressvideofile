@@ -1,0 +1,10 @@
+# robots.txt — see https://www.robotstxt.org/
+
+# Allow all well-behaved crawlers to index everything. The /app compressor
+# is a real, indexable product page (the money page), so it is NOT disallowed.
+
+User-agent: *
+Allow: /
+
+# Sitemap discovery
+Sitemap: https://compressvideofile.com/sitemap.xml

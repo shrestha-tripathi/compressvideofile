@@ -1,0 +1,80 @@
+# Cloudflare Pages _headers file
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+# --------------------------------------------------------------------------
+# Global security + cross-origin isolation (REQUIRED for ffmpeg.wasm mt)
+# --------------------------------------------------------------------------
+# The /app compressor runs ffmpeg.wasm. Its MULTITHREADED core uses
+# SharedArrayBuffer, which browsers only expose when the document is
+# "cross-origin isolated". That requires BOTH of these response headers on
+# every document:
+#
+#   Cross-Origin-Opener-Policy:   same-origin
+#   Cross-Origin-Embedder-Policy: require-corp
+#
+# With COEP: require-corp, every subresource must either send CORP/CORS
+# headers OR be same-origin. We load the ffmpeg core from a CDN via
+# `toBlobURL`, which fetches the file and re-serves it as a same-origin
+# `blob:` URL — so it satisfies require-corp without the CDN needing CORP
+# headers. Same-origin favicons / OG image are fine. If SharedArrayBuffer
+# is ever unavailable (e.g. headers not applied), the app feature-detects
+# and falls back to the single-threaded core automatically.
+#
+# X-Content-Type-Options + Referrer-Policy are baseline hardening.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# --------------------------------------------------------------------------
+# Noindex the .pages.dev infrastructure domain(s)
+# --------------------------------------------------------------------------
+# Cloudflare Pages serves the site at the .pages.dev hostname AND at any
+# custom domain attached to the project. The same HTML is reachable at both:
+#
+#   https://compressvideofile.com          (canonical, indexable)
+#   https://compressvideofile.pages.dev     (infra preview, NOT indexable)
+#
+# Google treats this as duplicate content and may split ranking signal or
+# pick the wrong canonical. Same risk for per-branch / per-commit previews
+# at *.compressvideofile.pages.dev.
+#
+# Fix: send `X-Robots-Tag: noindex` on every response from the .pages.dev
+# hostnames. The rule is hostname-scoped, so compressvideofile.com requests
+# never match and stay fully indexable. Combined with the canonical <link>
+# in Layout.astro (always the .com), this de-prioritizes the preview infra.
+
+https://compressvideofile.pages.dev/*
+  X-Robots-Tag: noindex
+
+https://*.compressvideofile.pages.dev/*
+  X-Robots-Tag: noindex
+
+# --------------------------------------------------------------------------
+# Favicon + icon assets
+# --------------------------------------------------------------------------
+# Explicit MIME for favicon.ico (some CDN configs default to
+# application/octet-stream, which browsers reject silently). Cache icon
+# assets for 30 days since they rarely change.
+
+/favicon.ico
+  Cache-Control: public, max-age=2592000
+  Content-Type: image/x-icon
+/favicon.svg
+  Cache-Control: public, max-age=2592000
+/favicon-32.png
+  Cache-Control: public, max-age=2592000
+/apple-touch-icon.png
+  Cache-Control: public, max-age=2592000
+/icon-192.png
+  Cache-Control: public, max-age=2592000
+/icon-512.png
+  Cache-Control: public, max-age=2592000
+/icon-512-maskable.png
+  Cache-Control: public, max-age=2592000
+
+# Manifest — short cache + explicit MIME
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+  Content-Type: application/manifest+json

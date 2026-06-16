@@ -1,0 +1,78 @@
+---
+/**
+ * Sitewide header — brand wordmark + nav + primary CTA.
+ *
+ * All strings come from site.config.ts. The CTA points at /app (the compressor).
+ * Sticky, translucent, blurred. Pure CSS / zero-JS.
+ */
+import { site } from "../site.config";
+
+const navLinks = [
+  { href: "/how-it-works/", label: "How it works" },
+  { href: "/faq/", label: "FAQ" },
+  { href: "/about/", label: "About" },
+];
+---
+
+<header
+  class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_85%,transparent)] backdrop-blur-md"
+>
+  <nav
+    class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
+    aria-label="Primary"
+  >
+    <a
+      href="/"
+      class="flex items-center gap-2 font-bold tracking-tight text-[var(--color-fg)]"
+    >
+      {/* Brand mark — film frame + down-arrow (compress / shrink) */}
+      <span
+        class="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-accent)]"
+        style="background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);"
+        aria-hidden="true"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m22 8-6 4 6 4V8Z"></path>
+          <rect width="14" height="12" x="2" y="6" rx="2" ry="2"></rect>
+          <path d="M9 9v6"></path>
+          <path d="m7 11 2 2 2-2"></path>
+        </svg>
+      </span>
+      <span>{site.name}</span>
+    </a>
+
+    <div class="flex items-center gap-1 sm:gap-2">
+      <ul class="hidden items-center gap-1 sm:flex">
+        {
+          navLinks.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class="rounded-md px-3 py-2 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      <a
+        href="/app/"
+        class="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+      >
+        Compress a video
+      </a>
+    </div>
+  </nav>
+</header>

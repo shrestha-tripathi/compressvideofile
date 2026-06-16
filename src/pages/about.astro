@@ -1,0 +1,149 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { site } from "../site.config";
+
+/**
+ * About page — trust signal for AdSense + Google E-E-A-T. Explains who built
+ * this and the privacy-first philosophy behind it. Avoids inventing personal
+ * details; speaks for the project. No `site.author` field exists in this
+ * config, so we attribute to the project itself.
+ */
+
+const aboutSchema = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "@id": `${site.url}/about#about`,
+  url: `${site.url}/about/`,
+  name: `About ${site.name}`,
+  description: `Why ${site.name} exists — a video compressor that runs entirely in your browser so your files never upload.`,
+  publisher: { "@id": `${site.url}/#organization` },
+};
+---
+
+<Layout
+  title="About — a video compressor that never uploads"
+  description={`${site.name} is a free, privacy-first video compressor that runs 100% in your browser. Learn why it exists and the principles behind it.`}
+  path="/about/"
+  jsonLd={[aboutSchema]}
+>
+  <Header />
+
+  <main class="mx-auto max-w-[760px] px-4 sm:px-6 py-16 md:py-24">
+    <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">About</p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-semibold tracking-tight">
+      The compressor we wanted to exist.
+    </h1>
+    <p class="mt-6 text-lg text-[var(--color-fg-muted)]">
+      {site.name} is built on one idea: shrinking a video shouldn't mean handing
+      it to a stranger's server first.
+    </p>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
+    <section class="space-y-10 leading-relaxed text-[var(--color-fg-muted)]">
+      <div>
+        <h2 class="text-xl md:text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          The problem
+        </h2>
+        <p class="mt-3">
+          You record a clip on your phone, it's 90 MB, and WhatsApp won't send
+          it. So you search “compress video,” land on a site, and upload your
+          personal video to a server you've never heard of — wait for it to
+          process, then download it back. It's slow, and it means a copy of your
+          video (maybe a private one) now lives on someone else's machine.
+        </p>
+        <p class="mt-3">
+          For years that round-trip was the only option, because real video
+          encoding needed a real server. That's no longer true.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-xl md:text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          What we built instead
+        </h2>
+        <p class="mt-3">
+          {site.name} runs <strong class="text-[var(--color-fg)]">ffmpeg compiled to WebAssembly</strong>
+          directly in your browser. When you drop in a video, it's compressed on
+          your own device and handed straight back to you. There is no upload
+          step, no server queue, and no copy of your file anywhere but your own
+          machine. The only thing that ever crosses the network is the
+          compressor's own code, loaded once and cached.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-xl md:text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          Our principles
+        </h2>
+        <ul class="mt-4 list-disc space-y-3 pl-6">
+          <li>
+            <strong class="text-[var(--color-fg)]">Your video is yours.</strong>
+            We can't see your files, scan them, or store them — not as a policy
+            promise, but because the architecture makes it impossible. Nothing
+            is uploaded.
+          </li>
+          <li>
+            <strong class="text-[var(--color-fg)]">Free, with no watermark.</strong>
+            No “upgrade to remove the logo,” no trial caps. Clean exports, every
+            time.
+          </li>
+          <li>
+            <strong class="text-[var(--color-fg)]">No accounts.</strong>
+            A compressor shouldn't need your email. There's nothing to sign up
+            for and nothing to log in to.
+          </li>
+          <li>
+            <strong class="text-[var(--color-fg)]">Honest about the tech.</strong>
+            We tell you exactly what loads from the network (the code) and what
+            doesn't (your video). You can verify it in your browser's Network tab.
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 class="text-xl md:text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          Who makes this
+        </h2>
+        <p class="mt-3">
+          {site.name} is an independent, privacy-first micro-tool maintained by a
+          solo developer based in {site.jurisdiction}. There's no company behind
+          it and no investor to please — just a small, focused tool that does one
+          job well. Questions or ideas? The
+          <a href="/contact/" class="text-[var(--color-accent)] underline">contact page</a>
+          lists every way to reach us.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-xl md:text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          How it stays free
+        </h2>
+        <p class="mt-3">
+          Because compression runs on your device, there are no upload-bandwidth
+          or storage bills to cover — so the tool can stay free. We may show
+          unobtrusive ads on content pages (never inside the compressor itself),
+          but we will never charge you to compress a video, and we will never
+          sell data we don't even collect.
+        </p>
+      </div>
+    </section>
+
+    <div class="mt-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6 md:p-8">
+      <h2 class="text-xl md:text-2xl font-semibold text-[var(--color-fg)]">Try it now</h2>
+      <p class="mt-3 text-[var(--color-fg-muted)]">
+        Shrink a video in seconds — no signup, no upload, no watermark.
+      </p>
+      <a
+        href="/app/"
+        class="mt-6 inline-flex h-10 items-center rounded-md bg-[var(--color-accent)] px-5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+      >
+        Compress a video →
+      </a>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

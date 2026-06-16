@@ -1,0 +1,153 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { site } from "../site.config";
+
+/**
+ * FAQ page — each Q&A doubles as a FAQPage schema entry (Google rich-result
+ * accordion) AND long-tail SEO content (each question is a real search query).
+ *
+ * Maintenance rule: keep questions short + answers under ~110 words so Google
+ * doesn't truncate the rich result.
+ */
+
+const faqs = [
+  {
+    q: `Is it really free?`,
+    a: `Yes — completely free. No signup, no watermark, no premium tier, and no ads on the compressor itself. Because the entire tool runs in your browser using WebAssembly, there are no upload servers or storage to pay for, so there's simply nothing to charge you for. Compress as many videos as you like.`,
+  },
+  {
+    q: `Does my video get uploaded?`,
+    a: `No. Your video is processed entirely on your own device and never leaves your browser. The only thing that loads from the network is the compressor's code (the ffmpeg.wasm binary) — that's program code, not your file. Once it has loaded, the actual compression happens locally in memory. You can even disconnect from the internet after it loads and it still works.`,
+  },
+  {
+    q: `How do I compress a video for WhatsApp?`,
+    a: `Open the compressor, drop your video in, and tap the “WhatsApp (16 MB)” preset (or “WhatsApp HD doc (64 MB)” for the document-send path). We calculate the right bitrate to hit that size, compress on your device, and give you a download — all without uploading the clip to any website first. This is the private way to shrink a video for WhatsApp.`,
+  },
+  {
+    q: `Will it lose quality?`,
+    a: `Compression always trades some quality for a smaller size, but you stay in control. A larger target size keeps more detail; a small target (like the 16 MB WhatsApp preset on a long clip) trades more. For most short clips the difference is barely noticeable. You can also lower the resolution (e.g. 1080p → 720p) to spend the bitrate more efficiently.`,
+  },
+  {
+    q: `What video formats are supported?`,
+    a: `You can drop in MP4, MOV (iPhone), WebM, MKV, AVI, and most common formats. The output is always H.264 MP4 with AAC audio and +faststart, which plays everywhere — phones, browsers, WhatsApp, email, Discord — and starts playing before it finishes downloading.`,
+  },
+  {
+    q: `Does it work on iPhone?`,
+    a: `Yes — it runs in Safari and Chrome on iOS, and it handles .mov files from your camera roll. Because phones have less memory than laptops, very large or very long videos can be tight on iOS; if a file is huge, the app shows a gentle warning and you can pick a smaller target or trim the clip first. Android Chrome handles large files comfortably.`,
+  },
+  {
+    q: `Is there a file size limit?`,
+    a: `There's no hard limit we impose — the practical ceiling is your device's memory, since everything is processed in-browser. Short clips and typical phone videos compress quickly. Multi-gigabyte files work best on a desktop with plenty of RAM. The app warns you before attempting something that might strain your device's memory.`,
+  },
+  {
+    q: `How is this different from FreeConvert, Clideo, or VEED?`,
+    a: `Those tools upload your video to their servers, compress it there, then let you download it — which is slower and means a copy of your personal video sits on someone else's machine. Compress Video File does the compression on your own device, so your video never uploads at all. That's the whole point: same result, none of the privacy trade-off.`,
+  },
+  {
+    q: `Do I need to install anything?`,
+    a: `No install and no account. It runs in any modern browser. You can optionally “install” it as a lightweight app from your browser's menu (Add to Home Screen / Install) for a one-tap icon, but every feature works directly from the browser tab.`,
+  },
+  {
+    q: `Can I choose the exact output size?`,
+    a: `Yes. Besides the purpose presets (WhatsApp, Email, Discord, Discord Nitro), there's a custom target-size slider so you can aim for an exact number of megabytes, plus a resolution selector (Keep / 1080p / 720p / 480p). We compute the matching video bitrate and warn you if a target is implausibly small for the clip's length.`,
+  },
+];
+
+// FAQPage JSON-LD — Google parses this into a rich accordion in SERPs.
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": `${site.url}/faq#faq`,
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: f.a,
+    },
+  })),
+};
+---
+
+<Layout
+  title="FAQ — Video Compressor Questions Answered"
+  description={`Answers about compressing video in your browser: is it free, does your video get uploaded, how to compress a video for WhatsApp, quality, supported formats, iPhone support, and file size limits. ${site.name}.`}
+  path="/faq/"
+  jsonLd={[faqSchema]}
+>
+  <Header />
+
+  <main class="mx-auto max-w-[820px] px-4 sm:px-6 py-16 md:py-24">
+    <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">FAQ</p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-semibold tracking-tight">
+      Frequently asked questions
+    </h1>
+    <p class="mt-6 text-lg text-[var(--color-fg-muted)]">
+      Everything about how {site.name} works — what it does, what it doesn't do
+      with your video (spoiler: never uploads it), and how to hit a specific size.
+    </p>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
+    <div class="space-y-4">
+      {faqs.map((f, i) => (
+        <details
+          class="group rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5 md:p-6 transition-colors hover:border-[var(--color-border-strong)]"
+          open={i === 0}
+        >
+          <summary class="flex cursor-pointer list-none items-start justify-between gap-4">
+            <h2 class="text-base md:text-lg font-semibold leading-snug text-[var(--color-fg)]">
+              {f.q}
+            </h2>
+            <svg
+              class="mt-1 size-5 shrink-0 text-[var(--color-fg-muted)] transition-transform group-open:rotate-180"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </summary>
+          <p class="mt-4 leading-relaxed text-[var(--color-fg-muted)]">
+            {f.a}
+          </p>
+        </details>
+      ))}
+    </div>
+
+    <div class="mt-16 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6 md:p-8">
+      <h2 class="text-xl md:text-2xl font-semibold text-[var(--color-fg)]">
+        Still have a question?
+      </h2>
+      <p class="mt-3 text-[var(--color-fg-muted)]">
+        Read <a href="/how-it-works/" class="text-[var(--color-accent)] underline">how it works under the hood</a>,
+        or just open the compressor — most things are clearer once you've shrunk
+        one clip.
+      </p>
+      <a
+        href="/app/"
+        class="mt-6 inline-flex h-10 items-center rounded-md bg-[var(--color-accent)] px-5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+      >
+        Compress a video →
+      </a>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* Hide the default disclosure marker so our chevron is the only indicator. */
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details > summary {
+    list-style: none;
+  }
+</style>

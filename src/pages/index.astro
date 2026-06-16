@@ -1,0 +1,323 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { site } from "../site.config";
+
+/**
+ * Landing page — the hero claim is the moat: the video never uploads.
+ * Sections: hero + trust chips, how-it-works (3 steps), features grid,
+ * before/after size visual, FAQ teaser, final CTA → /app/.
+ *
+ * WebApplication JSON-LD marks this URL as a usable app (MultimediaApplication,
+ * free) for software-app rich results.
+ */
+
+const webAppSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "@id": `${site.url}/#webapp`,
+  name: site.name,
+  alternateName: ["Video Compressor", "Compress video online", "Compress video for WhatsApp"],
+  url: site.url,
+  description: site.description,
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Any (Chrome, Edge, Firefox, Safari)",
+  browserRequirements: "Requires a modern browser with WebAssembly support",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  featureList: [
+    "Compress video 100% in your browser — never uploaded",
+    "WhatsApp, email, and Discord size presets",
+    "Custom target file size and resolution",
+    "No watermark, no signup, no install",
+    "Works offline after the first load",
+    "H.264 MP4 output for universal playback",
+  ],
+  publisher: { "@id": `${site.url}/#organization` },
+};
+
+// Feature chips — inline Lucide SVG path data (stroke=currentColor so each
+// icon recolors per theme + inherits the accent tint from its chip).
+const features = [
+  {
+    title: "Your video never uploads",
+    body:
+      "Compression runs entirely on your device with WebAssembly. The file never leaves your browser — only the compressor's code loads from a CDN, never your video.",
+    icon: `<path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79"/><path d="M9.21 4.21A6.67 6.67 0 0 1 12 4a6.5 6.5 0 0 1 6.5 6.5"/>`,
+  },
+  {
+    title: "Free, no watermark",
+    body:
+      "Every export is clean — no logo stamped in the corner, no trial limits, no “upgrade to remove watermark.” Compress as many videos as you want.",
+    icon: `<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>`,
+  },
+  {
+    title: "WhatsApp & email presets",
+    body:
+      "One tap shrinks your clip to fit WhatsApp's 16 MB limit, Gmail's 25 MB cap, or Discord's upload size — no guessing at bitrates.",
+    icon: `<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>`,
+  },
+  {
+    title: "No signup, no install",
+    body:
+      "There's no account to create and nothing to download. Open the page, drop a video, get a smaller file. That's the whole flow.",
+    icon: `<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>`,
+  },
+  {
+    title: "Works offline after load",
+    body:
+      "Once the compressor's code has loaded once, it's cached. You can pop offline and keep compressing — because nothing was ever being sent anywhere.",
+    icon: `<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>`,
+  },
+  {
+    title: "Fast H.264 output",
+    body:
+      "Exports universal H.264 MP4 with +faststart so it plays instantly everywhere — phones, browsers, chat apps — and streams while it loads.",
+    icon: `<path d="m13 2-3 7h4l-3 7"/><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 9-9 9 9 0 0 0-9-9"/>`,
+  },
+];
+
+const steps = [
+  {
+    n: "1",
+    title: "Drop your video",
+    body: "Drag a clip in or tap to pick one — MP4, MOV, WebM, MKV, AVI. It loads into your browser, not a server.",
+  },
+  {
+    n: "2",
+    title: "Pick a target size",
+    body: "Choose a preset (WhatsApp, Email, Discord…) or set a custom size and resolution. We compute the right bitrate for you.",
+  },
+  {
+    n: "3",
+    title: "Download the smaller file",
+    body: "Compression runs on your device with a live progress bar. Preview the result and download — all without an upload.",
+  },
+];
+
+const faqTeasers = [
+  { q: "Is it really free?", a: "Yes — no ads on the tool, no signup, no watermark, no premium tier. The whole product runs in your browser, so there's nothing to charge for." },
+  { q: "Does my video get uploaded?", a: "No. Your video is processed on your device and never leaves your browser. Only the compressor's WebAssembly code loads from a CDN — never your file." },
+  { q: "How do I compress a video for WhatsApp?", a: "Drop your video, tap the “WhatsApp (16 MB)” preset, and download. It fits WhatsApp's status and chat limits — without uploading it anywhere first." },
+  { q: "Will it lose quality?", a: "Some, like any compression — but you control the trade-off. Bigger target size = higher quality. For most clips the drop is barely noticeable." },
+];
+---
+
+<Layout
+  title="Free Online Video Compressor — No Upload"
+  description={site.description}
+  path="/"
+  jsonLd={[webAppSchema]}
+>
+  <Header />
+
+  <main>
+    <!-- HERO -->
+    <section class="border-b border-[var(--color-border)]">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-20 md:py-28">
+        <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">
+          Video compressor · 100% in your browser · Never uploads
+        </p>
+        <h1 class="mt-4 max-w-4xl text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight">
+          Compress any video — right in your browser.
+          <span class="text-[var(--color-accent)]"> It never uploads.</span>
+        </h1>
+        <p class="mt-6 max-w-2xl text-lg md:text-xl text-[var(--color-fg-muted)]">
+          Shrink MP4, MOV, and WebM files for WhatsApp, email, or Discord. Free,
+          no watermark, no signup. Your video is processed on your device and
+          never leaves your browser.
+        </p>
+        <div class="mt-9 flex flex-wrap gap-3">
+          <a
+            href="/app/"
+            class="inline-flex h-12 items-center rounded-lg bg-[var(--color-accent)] px-6 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+          >
+            Compress a video — free
+          </a>
+          <a
+            href="/how-it-works/"
+            class="inline-flex h-12 items-center rounded-lg border border-[var(--color-border-strong)] px-6 text-sm font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]"
+          >
+            How it works
+          </a>
+        </div>
+
+        <!-- Trust chips -->
+        <div class="mt-10 flex flex-wrap gap-2.5">
+          {[
+            { label: "Never uploads", icon: `<path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79"/><path d="M9.21 4.21A6.67 6.67 0 0 1 12 4a6.5 6.5 0 0 1 6.5 6.5"/>` },
+            { label: "No watermark", icon: `<path d="M20 6 9 17l-5-5"/>` },
+            { label: "Free forever", icon: `<circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M9 9h4.5a2 2 0 0 1 0 4H9"/>` },
+            { label: "No signup", icon: `<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>` },
+            { label: "Works on phone & desktop", icon: `<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>` },
+          ].map((chip) => (
+            <span class="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3.5 py-2 text-sm text-[var(--color-fg)]">
+              <svg class="size-4 text-[var(--color-accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={chip.icon} />
+              {chip.label}
+            </span>
+          ))}
+        </div>
+
+        <p class="mt-6 max-w-2xl text-sm text-[var(--color-fg-subtle)]">
+          Popular in India for one reason: you can
+          <span class="text-[var(--color-fg-muted)]">compress a video for WhatsApp without uploading it</span>
+          to any website first.
+        </p>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="border-b border-[var(--color-border)]">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-16 md:py-24">
+        <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">How it works</p>
+        <h2 class="mt-3 max-w-2xl text-3xl md:text-4xl font-semibold tracking-tight">
+          Three steps. Nothing leaves your device.
+        </h2>
+        <div class="mt-12 grid gap-6 md:grid-cols-3">
+          {steps.map((step) => (
+            <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6 md:p-8">
+              <span class="inline-flex size-10 items-center justify-center rounded-lg bg-[var(--color-accent)] text-base font-semibold text-[var(--color-accent-fg)]">
+                {step.n}
+              </span>
+              <h3 class="mt-5 text-lg font-semibold text-[var(--color-fg)]">{step.title}</h3>
+              <p class="mt-2 text-sm leading-relaxed text-[var(--color-fg-muted)]">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- BEFORE / AFTER SIZE VISUAL -->
+    <section class="border-b border-[var(--color-border)]">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-16 md:py-24">
+        <div class="max-w-2xl">
+          <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">The result</p>
+          <h2 class="mt-3 text-3xl md:text-4xl font-semibold tracking-tight">
+            A 92 MB clip becomes a 14 MB clip.
+          </h2>
+          <p class="mt-5 text-lg text-[var(--color-fg-muted)]">
+            Pick the “WhatsApp (16 MB)” preset and a 30-second 1080p clip drops
+            from <strong class="text-[var(--color-fg)]">92 MB</strong> to about
+            <strong class="text-[var(--color-fg)]">14 MB</strong> — small enough
+            to send, still sharp enough to watch.
+          </p>
+        </div>
+
+        <div class="mt-12 grid gap-5 sm:grid-cols-2">
+          <!-- BEFORE -->
+          <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-6 md:p-8">
+            <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]">
+              <span class="size-1.5 rounded-full bg-[var(--color-fg-subtle)]"></span>
+              Before
+            </div>
+            <p class="mt-4 text-3xl font-semibold text-[var(--color-fg)]">92 MB</p>
+            <p class="text-sm text-[var(--color-fg-muted)]">original · 1080p · 30s</p>
+            <div class="mt-5 h-3 w-full rounded-full bg-[var(--color-bg-muted)]">
+              <div class="h-3 rounded-full bg-[var(--color-border-strong)]" style="width: 100%"></div>
+            </div>
+          </div>
+
+          <!-- AFTER -->
+          <div class="rounded-xl border border-[color-mix(in_srgb,var(--color-accent)_40%,var(--color-border))] bg-[var(--color-bg)] p-6 md:p-8">
+            <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--color-accent)]">
+              <span class="size-1.5 rounded-full bg-[var(--color-accent)]"></span>
+              After · WhatsApp preset
+            </div>
+            <p class="mt-4 text-3xl font-semibold text-[var(--color-accent)]">14 MB</p>
+            <p class="text-sm text-[var(--color-fg-muted)]">compressed · 720p · 30s</p>
+            <div class="mt-5 h-3 w-full rounded-full bg-[var(--color-bg-muted)]">
+              <div class="h-3 rounded-full bg-[var(--color-accent)]" style="width: 15%"></div>
+            </div>
+            <p class="mt-4 text-sm font-medium text-[var(--color-success)]">≈ 85% smaller</p>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-[var(--color-fg-subtle)]">
+          Exact numbers depend on your clip — but the savings are always real,
+          and the math always runs on your device.
+        </p>
+      </div>
+    </section>
+
+    <!-- FEATURE GRID -->
+    <section class="border-b border-[var(--color-border)]">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-16 md:py-24">
+        <h2 class="max-w-2xl text-3xl md:text-4xl font-semibold tracking-tight">
+          Built around one principle:
+          <span class="text-[var(--color-fg-muted)]">your video is yours, and it stays on your device.</span>
+        </h2>
+        <div class="mt-12 grid gap-px overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-border)] sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((f) => (
+            <div class="bg-[var(--color-bg)] p-6 md:p-8">
+              <div class="flex items-center gap-3">
+                <span
+                  class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-[var(--color-accent)]"
+                  style="background-color: color-mix(in srgb, var(--color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-accent) 22%, transparent);"
+                  aria-hidden="true"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={f.icon} />
+                </span>
+                <h3 class="text-lg font-semibold text-[var(--color-fg)]">{f.title}</h3>
+              </div>
+              <p class="mt-3 text-sm leading-relaxed text-[var(--color-fg-muted)]">{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ TEASER -->
+    <section class="border-b border-[var(--color-border)]">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-16 md:py-24">
+        <div class="grid gap-12 md:grid-cols-[1fr_1.4fr]">
+          <div>
+            <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">FAQ</p>
+            <h2 class="mt-3 text-3xl md:text-4xl font-semibold tracking-tight">Questions, answered.</h2>
+            <p class="mt-5 text-[var(--color-fg-muted)]">
+              The short version: it's free, it's private, and your video never
+              gets uploaded. The longer version lives on the FAQ.
+            </p>
+            <a
+              href="/faq/"
+              class="mt-6 inline-flex h-10 items-center rounded-md border border-[var(--color-border-strong)] px-4 text-sm font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]"
+            >
+              Read all FAQs →
+            </a>
+          </div>
+          <div class="space-y-3">
+            {faqTeasers.map((f) => (
+              <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5">
+                <h3 class="font-semibold text-[var(--color-fg)]">{f.q}</h3>
+                <p class="mt-2 text-sm leading-relaxed text-[var(--color-fg-muted)]">{f.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section>
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-20 md:py-28 text-center">
+        <h2 class="text-3xl md:text-5xl font-semibold tracking-tight">
+          Shrink your next video without uploading it.
+        </h2>
+        <p class="mx-auto mt-5 max-w-xl text-lg text-[var(--color-fg-muted)]">
+          Open the compressor, drop a clip, pick a size. It runs on your device,
+          finishes in seconds, and the file never leaves your browser.
+        </p>
+        <a
+          href="/app/"
+          class="mt-10 inline-flex h-12 items-center rounded-lg bg-[var(--color-accent)] px-8 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+        >
+          Compress a video — free
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
