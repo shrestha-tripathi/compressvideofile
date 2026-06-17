@@ -6,21 +6,36 @@
  * toBlobURL so it works under COEP: require-corp. Compression runs in a Web
  * Worker on the user's machine.
  *
- * Engine: @ffmpeg/ffmpeg 0.12.15 + @ffmpeg/util 0.12.2.
- *   - Preferred: multithreaded core (@ffmpeg/core-mt) — needs SharedArrayBuffer,
- *     which needs COOP/COEP headers (set in public/_headers).
- *   - Fallback: single-threaded core (@ffmpeg/core) when SAB is unavailable
- *     (e.g. headers not applied, some iOS contexts) — slower but works.
+ * Engine: @ffmpeg/ffmpeg 0.12.15 + @ffmpeg/util 0.12.2, single-threaded
+ * @ffmpeg/core 0.12.9 (ESM). The multi-threaded core is intentionally NOT used —
+ * it crashes mid-encode in real browsers (see the BASE_ST note below).
  */
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 
-const CORE_VERSION = "0.12.6"; // battle-tested core for @ffmpeg/ffmpeg 0.12.x
-// IMPORTANT: use the UMD build, not ESM. @ffmpeg/ffmpeg's worker bootstrap loads
-// the core via importScripts(), which requires the UMD layout. Loading the ESM
-// path makes ffmpeg.load() hang forever ("stuck at Compressing…").
-const BASE_MT = `https://unpkg.com/@ffmpeg/core-mt@${CORE_VERSION}/dist/umd`;
-const BASE_ST = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
+// Match @ffmpeg/ffmpeg 0.12.15's own declared CORE_VERSION (see its const.js) so
+// the core's wasm ABI matches the library exactly.
+const CORE_VERSION = "0.12.9";
+// IMPORTANT: use the ESM build, NOT umd. We `import { FFmpeg } from "@ffmpeg/ffmpeg"`,
+// so the bundler pulls in the library's ESM build, which spawns its worker as
+// `type: "module"`. A module worker can't call importScripts(), so the worker
+// loads the core via `self.createFFmpegCore = (await import(coreURL)).default`.
+// Only the ESM core exposes that `export default` — the UMD core has no default
+// export, so a UMD core here yields `undefined` → throw "failed to import
+// ffmpeg-core.js" (ERROR_IMPORT_FAILURE). The UMD layout only works when the
+// library itself is loaded as a UMD <script> (classic worker, importScripts).
+// Match the build layout to the library build we bundle: ESM ↔ ESM.
+//
+// SINGLE-THREADED ONLY — the multi-threaded core (@ffmpeg/core-mt) is DISABLED.
+// Empirically, EVERY core-mt version (0.12.4/0.12.6/0.12.9/0.12.10) crashes mid-
+// encode in real browsers with `RuntimeError: function signature mismatch` (which
+// surfaces as a confusing "Cannot read properties of undefined (reading
+// 'startsWith')" from the library reading the dead worker's error payload). The
+// single-threaded core completes the identical job flawlessly. MT would give a
+// 2-4x speedup but a fast-but-crashing compressor is worse than a slower reliable
+// one. If a future @ffmpeg/core-mt fixes the pthread/SIMD ABI, re-enable by
+// restoring the SAB branch below and re-running the dist/ff-test.html probe.
+const BASE_ST = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/esm`;
 
 interface PresetDef {
   id: string;
@@ -92,14 +107,13 @@ export function initCompressor(): void {
   let targetMB = 25;
   let ffmpeg: FFmpeg | null = null;
   let ffmpegLoaded = false;
-  let usingMT = false;
   let resultUrl: string | null = null;
   let cancelled = false;
 
   const show = (el: HTMLElement | null) => el?.classList.remove("hidden");
   const hide = (el: HTMLElement | null) => el?.classList.add("hidden");
 
-  // ---- load ffmpeg lazily, prefer multithread ----
+  // ---- load ffmpeg lazily (single-threaded core; see BASE_ST note above) ----
   async function ensureFfmpeg(): Promise<FFmpeg> {
     if (ffmpeg && ffmpegLoaded) return ffmpeg;
     ffmpeg = new FFmpeg();
@@ -111,24 +125,12 @@ export function initCompressor(): void {
       progressFill?.classList.remove("is-indeterminate");
     });
 
-    const hasSAB = typeof SharedArrayBuffer !== "undefined";
-    const base = hasSAB ? BASE_MT : BASE_ST;
-    usingMT = hasSAB;
-
-    const cfg: {
-      coreURL: string;
-      wasmURL: string;
-      workerURL?: string;
-    } = {
-      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm"),
+    // Always the single-threaded core: the multi-threaded core crashes mid-encode
+    // in real browsers (`function signature mismatch`) regardless of version.
+    const cfg: { coreURL: string; wasmURL: string } = {
+      coreURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.js`, "text/javascript"),
+      wasmURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.wasm`, "application/wasm"),
     };
-    if (hasSAB) {
-      cfg.workerURL = await toBlobURL(
-        `${base}/ffmpeg-core.worker.js`,
-        "text/javascript",
-      );
-    }
     // Guard against a silent hang: if load() doesn't resolve in 45s, reject so
     // the UI can show an error + retry instead of spinning forever.
     await Promise.race([
@@ -244,7 +246,7 @@ export function initCompressor(): void {
     }
     if (cancelled) return;
     if (workStatus)
-      workStatus.textContent = `Compressing on your device${usingMT ? " (multi-threaded)" : ""}… nothing is uploaded.`;
+      workStatus.textContent = `Compressing on your device… nothing is uploaded.`;
 
     const inName = "input" + (file.name.match(/\.[a-z0-9]+$/i)?.[0] ?? ".mp4");
     const outName = "output.mp4";
