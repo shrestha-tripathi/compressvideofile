@@ -224,3 +224,46 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .cvf-spinner { animation-duration: 1.4s; }
 }
+
+/* ============================================================
+   /app — Video / Audio segmented control
+   ============================================================
+   A pill switch at the top of the app. JS toggles .is-active on the
+   selected button and aria-selected for a11y. Both themes.
+*/
+.cvf-seg {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+}
+.cvf-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.cvf-seg-btn:hover {
+  color: var(--color-fg);
+}
+.cvf-seg-btn.is-active {
+  color: var(--color-accent-fg);
+  background-color: var(--color-accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.cvf-seg-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.cvf-seg-btn svg {
+  flex-shrink: 0;
+}
