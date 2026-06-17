@@ -15,9 +15,12 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 
-const CORE_VERSION = "0.12.10"; // matches @ffmpeg/ffmpeg 0.12.15
-const BASE_MT = `https://unpkg.com/@ffmpeg/core-mt@${CORE_VERSION}/dist/esm`;
-const BASE_ST = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/esm`;
+const CORE_VERSION = "0.12.6"; // battle-tested core for @ffmpeg/ffmpeg 0.12.x
+// IMPORTANT: use the UMD build, not ESM. @ffmpeg/ffmpeg's worker bootstrap loads
+// the core via importScripts(), which requires the UMD layout. Loading the ESM
+// path makes ffmpeg.load() hang forever ("stuck at Compressing…").
+const BASE_MT = `https://unpkg.com/@ffmpeg/core-mt@${CORE_VERSION}/dist/umd`;
+const BASE_ST = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 interface PresetDef {
   id: string;
@@ -126,7 +129,17 @@ export function initCompressor(): void {
         "text/javascript",
       );
     }
-    await ffmpeg.load(cfg);
+    // Guard against a silent hang: if load() doesn't resolve in 45s, reject so
+    // the UI can show an error + retry instead of spinning forever.
+    await Promise.race([
+      ffmpeg.load(cfg),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("ffmpeg load timed out after 45s")),
+          45000,
+        ),
+      ),
+    ]);
     ffmpegLoaded = true;
     return ffmpeg;
   }
@@ -215,10 +228,18 @@ export function initCompressor(): void {
     try {
       ff = await ensureFfmpeg();
     } catch (err) {
-      if (workStatus)
-        workStatus.textContent =
-          "Couldn't load the compressor. Check your connection and try again.";
       console.error("[cvf] ffmpeg load failed", err);
+      // Reset so a retry re-attempts a fresh load.
+      ffmpeg = null;
+      ffmpegLoaded = false;
+      // Return the user to the setup panel with a visible error + retry path.
+      hide(workPanel);
+      show(setupPanel);
+      if (warnEl) {
+        warnEl.textContent =
+          "⚠ Couldn't load the compressor engine. This needs a modern desktop browser (Chrome or Edge) and a working connection. Please try again.";
+        show(warnEl);
+      }
       return;
     }
     if (cancelled) return;
