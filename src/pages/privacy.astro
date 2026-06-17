@@ -2,15 +2,37 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import { site } from "../site.config";
+import { site, absoluteUrl } from "../site.config";
 
-const updated = "June 2026";
+/**
+ * /privacy — the LEGAL privacy policy (GDPR/CCPA structured), required for
+ * AdSense approval. Leads with the client-side moat (your video is compressed
+ * on-device via WebAssembly, never uploaded) then layers the full legal
+ * structure: data controller, what is + isn't collected, cookies (GA4 +
+ * potential AdSense/DART), third parties, rights, retention, contact. All
+ * operator values come from site.config.ts.
+ */
+
+const updated = "June 17, 2026";
+
+const privacySchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": absoluteUrl("/privacy/"),
+  name: `Privacy Policy — ${site.name}`,
+  url: absoluteUrl("/privacy/"),
+  description: `How ${site.name} handles your data: your video is compressed on your device and never uploaded. Cookies, third parties, and your GDPR/CCPA rights.`,
+  dateModified: "2026-06-17",
+  isPartOf: { "@id": `${site.url}/#website` },
+  publisher: { "@id": `${site.url}/#organization` },
+};
 ---
 
 <Layout
   title="Privacy Policy"
-  description={`How ${site.name} handles your data: your video is compressed on your device and never uploaded.`}
+  description={`${site.name} privacy policy — your video is compressed in your browser and never uploaded. What little we process, cookies, third parties, and your GDPR/CCPA rights.`}
   path="/privacy/"
+  jsonLd={[privacySchema]}
 >
   <Header />
 
@@ -19,67 +41,181 @@ const updated = "June 2026";
     <h1 class="mt-4 text-4xl md:text-5xl font-semibold tracking-tight">Privacy Policy</h1>
     <p class="mt-4 text-sm text-[var(--color-fg-subtle)]">Last updated: {updated}</p>
 
-    <div class="mt-10 space-y-8 text-[var(--color-fg-muted)] leading-relaxed">
-      <p>
-        The short version: <strong class="text-[var(--color-fg)]">your video is
-        compressed entirely on your own device and is never uploaded to us or
-        anyone else.</strong> {site.name} has no server that receives your files.
-      </p>
+    <p class="mt-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5 leading-relaxed text-[var(--color-fg-muted)]">
+      <strong class="font-semibold text-[var(--color-fg)]">The short version:</strong>
+      your video is compressed entirely on your own device and is never uploaded
+      to us or anyone else. {site.name} has no server that receives your files.
+      The only data anyone processes is anonymous, aggregate website analytics.
+    </p>
 
-      <div>
-        <h2 class="text-xl font-semibold text-[var(--color-fg)]">How compression works</h2>
+    <div class="mt-10 space-y-10 text-[var(--color-fg-muted)] leading-relaxed">
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">1. Who we are</h2>
         <p class="mt-3">
-          {site.name} compresses video using WebAssembly that runs inside your browser.
-          When you choose a video, it's read into your browser's memory and processed
-          locally — it never travels across the internet. The only thing downloaded from
-          the network is the compressor program itself (a WebAssembly module), which is
-          code, not your data.
-        </p>
-      </div>
-
-      <div>
-        <h2 class="text-xl font-semibold text-[var(--color-fg)]">What we collect</h2>
-        <p class="mt-3">
-          No accounts, no logins, no uploaded files. We do not receive, store, or have
-          any access to the videos you compress.
-        </p>
-      </div>
-
-      <div>
-        <h2 class="text-xl font-semibold text-[var(--color-fg)]">Analytics</h2>
-        <p class="mt-3">
-          We may use privacy-respecting, aggregate analytics to count page views and
-          understand which features are used. It never has access to your videos and does
-          not identify you. If enabled, it loads only on the production site.
-        </p>
-      </div>
-
-      <div>
-        <h2 class="text-xl font-semibold text-[var(--color-fg)]">Hosting</h2>
-        <p class="mt-3">
-          The site is served as static files by a content-delivery network, which may
-          process standard non-identifying request logs (such as IP address and user
-          agent) for security and reliability. This is never combined with your video
-          content, which the CDN never sees.
-        </p>
-      </div>
-
-      <div>
-        <h2 class="text-xl font-semibold text-[var(--color-fg)]">Children's privacy</h2>
-        <p class="mt-3">
-          {site.name} is a general-audience utility and collects no personal data from
-          anyone, including children under 13.
-        </p>
-      </div>
-
-      <div>
-        <h2 class="text-xl font-semibold text-[var(--color-fg)]">Changes & contact</h2>
-        <p class="mt-3">
-          If this policy changes, the “last updated” date will change with it. Questions?
-          Email
+          {site.name} (“we”, “us”, “our”) is a free, client-side web application
+          operated by {site.author}. We act as the data controller for the
+          limited, non-content data described below. For any privacy question or
+          request, contact
           <a href={`mailto:${site.contactEmail}`} class="text-[var(--color-accent)] underline">{site.contactEmail}</a>.
         </p>
-      </div>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">2. Your video never leaves your device</h2>
+        <p class="mt-3">
+          {site.name} compresses video using <strong class="font-semibold text-[var(--color-fg)]">WebAssembly</strong>
+          that runs inside your browser. When you choose a video, it's read into
+          your browser's memory and processed locally — it never travels across
+          the internet. The only thing downloaded from the network is the
+          compressor program itself (a WebAssembly module), which is code, not
+          your data. Your video content:
+        </p>
+        <ul class="mt-4 list-disc space-y-2 pl-6">
+          <li>is never transmitted to us or to any server;</li>
+          <li>is never stored, backed up, or processed on our infrastructure;</li>
+          <li>cannot be read by us, because we never receive it;</li>
+          <li>stays on your device — the output is saved only when you download it.</li>
+        </ul>
+        <p class="mt-4">
+          There is no server-side account, database, or upload. The entire app is
+          static files served from a content-delivery network. You can verify
+          this in the
+          <a href={site.githubRepo} target="_blank" rel="noopener" class="text-[var(--color-accent)] underline">open-source code</a>
+          or by watching your browser's Network tab while you compress a video.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">3. Information we do process</h2>
+        <p class="mt-3">
+          To run and improve the website, a limited amount of standard,
+          non-content data is processed:
+        </p>
+        <ul class="mt-4 list-disc space-y-2 pl-6">
+          <li>
+            <strong class="font-semibold text-[var(--color-fg)]">Anonymous analytics.</strong>
+            We use Google Analytics 4 to count page views and understand broad
+            usage (e.g. which pages are popular, rough country, device type).
+            This is aggregate and anonymized — it is never linked to your videos,
+            which we don't have access to.
+          </li>
+          <li>
+            <strong class="font-semibold text-[var(--color-fg)]">Server logs.</strong>
+            Our hosting/CDN provider (Cloudflare) may automatically log standard
+            request metadata such as IP address and user-agent for security and
+            abuse-prevention, as is typical for any website.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">4. Cookies and similar technologies</h2>
+        <p class="mt-3">
+          {site.name} itself does not use cookies to track you. We use your
+          browser's local storage only to remember your own preferences (such as
+          your theme choice) — never for tracking.
+        </p>
+        <p class="mt-4">Third-party services we load may set cookies:</p>
+        <ul class="mt-4 list-disc space-y-2 pl-6">
+          <li>
+            <strong class="font-semibold text-[var(--color-fg)]">Google Analytics</strong>
+            sets cookies to measure aggregate usage. See
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" class="text-[var(--color-accent)] underline">Google's Privacy Policy</a>.
+          </li>
+          <li>
+            <strong class="font-semibold text-[var(--color-fg)]">Advertising (if shown).</strong>
+            We may display ads served by Google AdSense. Third-party vendors,
+            including Google, use cookies (such as the DART cookie) to serve ads
+            based on your prior visits to this and other websites. Google's use
+            of advertising cookies enables it and its partners to serve ads to
+            you based on your visits. You can opt out of personalized advertising
+            via
+            <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener" class="text-[var(--color-accent)] underline">Google Ads Settings</a>,
+            or opt out of some third-party vendors' cookies at
+            <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener" class="text-[var(--color-accent)] underline">aboutads.info/choices</a>.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">5. Third-party services</h2>
+        <p class="mt-3">
+          We rely on a small set of reputable providers:
+          <strong class="font-semibold text-[var(--color-fg)]">Cloudflare</strong>
+          (hosting and content delivery),
+          <strong class="font-semibold text-[var(--color-fg)]">Google Analytics</strong>
+          (anonymous usage measurement), and potentially
+          <strong class="font-semibold text-[var(--color-fg)]">Google AdSense</strong>
+          (advertising). The WebAssembly compressor module is delivered via a
+          public CDN (unpkg/jsDelivr). Each processes data under its own privacy
+          policy. We do not sell your personal information.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">6. Your rights (GDPR &amp; CCPA)</h2>
+        <p class="mt-3">
+          Because your videos live only on your device, you already have complete
+          control: nothing of yours is ever sent to us. For the limited analytics
+          data processed by our providers, and depending on your jurisdiction
+          (e.g. the EU/UK under GDPR, or California under the CCPA), you may have
+          the right to access, correct, delete, or restrict processing of your
+          personal data, and to object to it.
+        </p>
+        <p class="mt-4">
+          To exercise any of these rights, email
+          <a href={`mailto:${site.contactEmail}`} class="text-[var(--color-accent)] underline">{site.contactEmail}</a>.
+          You also have the right to lodge a complaint with your local data
+          protection authority.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">7. Children's privacy</h2>
+        <p class="mt-3">
+          {site.name} is a general-audience utility and is not directed at
+          children under 13. Since we collect no personal content, none is
+          knowingly collected from children.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">8. International data transfers</h2>
+        <p class="mt-3">
+          Our providers (Cloudflare, Google) operate globally and may process the
+          limited non-content data described above on servers outside your
+          country, under their own safeguards and standard contractual clauses.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">9. Data retention</h2>
+        <p class="mt-3">
+          We retain none of your video content at any time. Aggregate analytics
+          are retained by Google Analytics under its standard retention settings;
+          CDN security logs are short-lived per Cloudflare's policy.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">10. Changes to this policy</h2>
+        <p class="mt-3">
+          We may update this policy from time to time. Material changes will be
+          reflected by the “Last updated” date above. Continued use of
+          {site.name} after a change constitutes acceptance of the revised policy.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">11. Contact</h2>
+        <p class="mt-3">
+          Questions about this policy or your data? Email
+          <a href={`mailto:${site.contactEmail}`} class="text-[var(--color-accent)] underline">{site.contactEmail}</a>
+          or open an issue on
+          <a href={site.githubRepo} target="_blank" rel="noopener" class="text-[var(--color-accent)] underline">GitHub</a>.
+          See also our <a href="/terms/" class="text-[var(--color-accent)] underline">Terms of Use</a>.
+        </p>
+      </section>
     </div>
   </main>
 

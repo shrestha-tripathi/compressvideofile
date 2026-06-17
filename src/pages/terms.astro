@@ -2,15 +2,28 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import { site } from "../site.config";
+import { site, absoluteUrl } from "../site.config";
 
 const updated = "June 2026";
+
+// WebPage JSON-LD — layered on sitewide Org + WebSite + auto-breadcrumb.
+const termsSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": absoluteUrl("/terms/"),
+  name: `Terms of Use — ${site.name}`,
+  url: absoluteUrl("/terms/"),
+  description: `The terms for using ${site.name}, a free in-browser video compressor.`,
+  isPartOf: { "@id": `${site.url}/#website` },
+  publisher: { "@id": `${site.url}/#organization` },
+};
 ---
 
 <Layout
   title="Terms of Use"
   description={`The simple terms for using ${site.name}, a free in-browser video compressor.`}
   path="/terms/"
+  jsonLd={[termsSchema]}
 >
   <Header />
 

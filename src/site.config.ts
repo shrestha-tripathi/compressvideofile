@@ -44,6 +44,8 @@ export const site = {
 
   /** Contact email for trust pages. */
   contactEmail: env.PUBLIC_SITE_CONTACT_EMAIL ?? "shrestha.tripathi@gmail.com",
+  /** Operator/author name — data controller in the privacy policy. */
+  author: env.PUBLIC_SITE_AUTHOR ?? "Shrestha Tripathi",
   /** Public GitHub repo (optional; powers "open source" links). */
   githubRepo:
     env.PUBLIC_SITE_GITHUB_REPO ??

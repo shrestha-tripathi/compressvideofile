@@ -2,13 +2,47 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import { site } from "../site.config";
+import { site, absoluteUrl } from "../site.config";
+
+// HowTo JSON-LD — mirrors the visible "three steps" section below (schema text
+// must match on-page content). Layered on sitewide Org + WebSite + breadcrumb.
+const howToSchema = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: `How to compress a video in your browser with ${site.name}`,
+  description: `Shrink MP4, MOV, and WebM files entirely in your browser with ${site.name} — no upload, no watermark, no signup.`,
+  totalTime: "PT2M",
+  step: [
+    {
+      "@type": "HowToStep",
+      position: 1,
+      name: "Drop a video in",
+      text: "Pick or drag a file. Your browser reads it straight from disk into memory — no bytes go to a server.",
+      url: absoluteUrl("/how-it-works/#step1"),
+    },
+    {
+      "@type": "HowToStep",
+      position: 2,
+      name: "Choose a target size",
+      text: "Pick a preset (WhatsApp 16 MB, Email 25 MB, Discord…) or set a custom size and resolution. It converts that into a precise video bitrate.",
+      url: absoluteUrl("/how-it-works/#step2"),
+    },
+    {
+      "@type": "HowToStep",
+      position: 3,
+      name: "It compresses, locally",
+      text: "A WebAssembly build of ffmpeg re-encodes the video to H.264/AAC at that bitrate, with a real progress bar. Preview and download — nothing ever uploads.",
+      url: absoluteUrl("/how-it-works/#step3"),
+    },
+  ],
+};
 ---
 
 <Layout
   title="How browser-based video compression works"
   description={`How ${site.name} shrinks video entirely in your browser with ffmpeg.wasm — the WebAssembly engine, the bitrate math behind the size presets, why your video never uploads, and how H.264 output keeps it playable everywhere.`}
   path="/how-it-works/"
+  jsonLd={[howToSchema]}
 >
   <Header />
 
