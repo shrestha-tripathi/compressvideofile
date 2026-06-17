@@ -56,10 +56,11 @@ export const site = {
   /**
    * Google Analytics 4 Measurement ID (format: G-XXXXXXXXXX). Empty string
    * disables the gtag.js snippet entirely. Only injected in production builds
-   * so localhost dev never pollutes the analytics property. Placeholder empty
-   * until a real property is created — set via PUBLIC_GA_MEASUREMENT_ID.
+   * so localhost dev never pollutes the analytics property. Baked prod default;
+   * override per-environment via PUBLIC_GA_MEASUREMENT_ID (set "" to disable
+   * for forks/self-hosts).
    */
-  gaId: env.PUBLIC_GA_MEASUREMENT_ID ?? "",
+  gaId: env.PUBLIC_GA_MEASUREMENT_ID ?? "G-BX5CYJVWMK",
 } as const;
 
 export type SiteConfig = typeof site;
