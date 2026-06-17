@@ -510,7 +510,18 @@ export function initCompressor(): void {
         ? "MP4, MOV, WebM, MKV, AVI · nothing is uploaded"
         : "MP3, M4A, WAV, FLAC, OGG, Opus · nothing is uploaded";
     if (pickLabel) pickLabel.textContent = isVideo ? "Choose a video" : "Choose audio";
-    fileInput?.setAttribute("accept", isVideo ? "video/*" : "audio/*");
+    // audio/* alone is unreliable on Windows: Chrome resolves it against the
+    // registry's per-extension Content-Type, and many audio extensions (.flac,
+    // .opus, .m4a, .oga, .aiff, .wma, .caf…) often have NO registry MIME → the
+    // picker shows an EMPTY list. Pinning explicit extensions matches by name and
+    // bypasses the registry entirely. List mirrors AUDIO_EXT. Video stays bare
+    // ("video/*") on purpose — see the mobile double-picker fix in the skill.
+    fileInput?.setAttribute(
+      "accept",
+      isVideo
+        ? "video/*"
+        : "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.wma,.aiff,.aif,.alac,.caf,.amr,.m4b",
+    );
     if (compressBtn) compressBtn.textContent = isVideo ? "Compress video" : "Compress audio";
   }
   function switchMode(next: Mode): void {
