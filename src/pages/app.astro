@@ -58,7 +58,7 @@ const webAppSchema = {
           Choose a video
         </button>
         <p class="mt-1 text-xs text-[var(--color-fg-subtle)]">MP4, MOV, WebM, MKV, AVI · nothing is uploaded</p>
-        <input id="cvf-file" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.m4v" class="hidden" />
+        <input id="cvf-file" type="file" accept="video/*" class="sr-only" aria-hidden="true" tabindex="-1" />
       </div>
 
       <p class="mt-4 text-center text-xs text-[var(--color-fg-subtle)]">

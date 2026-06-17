@@ -345,7 +345,15 @@ export function initCompressor(): void {
   }
 
   // ================= wire up =================
-  pickBtn?.addEventListener("click", () => fileInput.click());
+  // File picker: the dropzone opens it on click. The "Choose a video" button is
+  // INSIDE the dropzone, so its click must NOT also bubble to the dropzone —
+  // otherwise the picker fires twice per tap, and iOS Safari (one picker per
+  // user gesture) silently dismisses BOTH, leaving the user stuck on the
+  // dropzone with no file. stopPropagation keeps it to exactly one picker.
+  pickBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
   dropzone.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", () => {
     const f = fileInput.files?.[0];
