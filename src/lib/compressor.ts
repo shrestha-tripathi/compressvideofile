@@ -1,51 +1,35 @@
 /**
- * Compress Video File — 100% client-side video + audio compression via ffmpeg.wasm.
+ * Compress Video File — /app controller: 100% client-side video + audio
+ * compression via ffmpeg.wasm, with optional trimming.
  *
- * The user's file NEVER uploads. Only the ffmpeg WebAssembly binary is fetched
- * from a CDN (it's code, not user data), converted to a same-origin blob URL via
- * toBlobURL so it works under COEP: require-corp. Compression runs in a Web
- * Worker on the user's machine.
- *
- * Engine: @ffmpeg/ffmpeg 0.12.15 + @ffmpeg/util 0.12.2, single-threaded
- * @ffmpeg/core 0.12.9 (ESM). The multi-threaded core is intentionally NOT used —
- * it crashes mid-encode in real browsers (see the BASE_ST note below).
+ * The user's file NEVER uploads. All the ffmpeg core pins, the ESM-vs-UMD trap
+ * and the multi-threaded-core crash are owned by `ffmpeg-engine.ts` — do NOT
+ * re-add them here. File-type guards, picker `accept` strings and metadata
+ * probing live in `media-file.ts` and are shared with /trim.
  *
  * TWO MODES (one engine, one wasm):
  *  - VIDEO: target a SIZE (MB); bitrate is derived from size/duration; libx264.
  *  - AUDIO: target a BITRATE (kbps) directly; libmp3lame (MP3) or aac (M4A).
  * The audio path is strictly lighter than video (no libx264), so it's the more
  * robust of the two on low-memory mobile. The same 0.12.9 wasm ships
- * libmp3lame + aac (verified against the core's own --enable-libmp3lame build
- * config), so audio needs ZERO new deps and ZERO new wasm.
+ * libmp3lame + aac, so audio needs ZERO new deps and ZERO new wasm.
+ *
+ * TRIM (optional, both modes): -ss before -i (instant input seek) + -t duration.
+ * Trimming changes the EFFECTIVE duration, which the bitrate math depends on —
+ * see effectiveDuration() and its callers.
  */
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { toBlobURL } from "@ffmpeg/util";
-
-// Match @ffmpeg/ffmpeg 0.12.15's own declared CORE_VERSION (see its const.js) so
-// the core's wasm ABI matches the library exactly.
-const CORE_VERSION = "0.12.9";
-// IMPORTANT: use the ESM build, NOT umd. We `import { FFmpeg } from "@ffmpeg/ffmpeg"`,
-// so the bundler pulls in the library's ESM build, which spawns its worker as
-// `type: "module"`. A module worker can't call importScripts(), so the worker
-// loads the core via `self.createFFmpegCore = (await import(coreURL)).default`.
-// Only the ESM core exposes that `export default` — the UMD core has no default
-// export, so a UMD core here yields `undefined` → throw "failed to import
-// ffmpeg-core.js" (ERROR_IMPORT_FAILURE). The UMD layout only works when the
-// library itself is loaded as a UMD <script> (classic worker, importScripts).
-// Match the build layout to the library build we bundle: ESM ↔ ESM.
-//
-// SINGLE-THREADED ONLY — the multi-threaded core (@ffmpeg/core-mt) is DISABLED.
-// Empirically, EVERY core-mt version (0.12.4/0.12.6/0.12.9/0.12.10) crashes mid-
-// encode in real browsers with `RuntimeError: function signature mismatch` (which
-// surfaces as a confusing "Cannot read properties of undefined (reading
-// 'startsWith')" from the library reading the dead worker's error payload). The
-// single-threaded core completes the identical job flawlessly. MT would give a
-// 2-4x speedup but a fast-but-crashing compressor is worse than a slower reliable
-// one. If a future @ffmpeg/core-mt fixes the pthread/SIMD ABI, re-enable by
-// restoring the SAB branch below and re-running the dist/ff-test.html probe.
-const BASE_ST = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/esm`;
-
-type Mode = "video" | "audio";
+import { ensureFfmpeg, terminateFfmpeg, runJob } from "./ffmpeg-engine";
+import {
+  type MediaMode,
+  acceptFor,
+  isAcceptable,
+  probeMedia,
+  fmtBytes,
+  fmtDuration,
+  formatTimecode,
+  parseTimecode,
+  fileStem,
+} from "./media-file";
 
 interface PresetDef {
   id: string;
@@ -84,17 +68,6 @@ type AudioFmt = "mp3" | "m4a";
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T | null =>
   document.getElementById(id) as T | null;
 
-function fmtBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-function fmtDuration(sec: number): string {
-  if (!isFinite(sec) || sec <= 0) return "—";
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 export function initCompressor(): void {
   const dropzone = $("cvf-dropzone");
@@ -125,6 +98,18 @@ export function initCompressor(): void {
   const compressBtn = $("cvf-compress");
   const warnEl = $("cvf-warn");
 
+  // trim controls
+  const trimDetails = $<HTMLDetailsElement>("cvf-trim");
+  const trimPreviewVideo = $<HTMLVideoElement>("cvf-trim-video");
+  const trimPreviewAudio = $<HTMLAudioElement>("cvf-trim-audio");
+  const trimStartInput = $<HTMLInputElement>("cvf-trim-start");
+  const trimEndInput = $<HTMLInputElement>("cvf-trim-end");
+  const trimSetStart = $("cvf-trim-set-start");
+  const trimSetEnd = $("cvf-trim-set-end");
+  const trimReset = $("cvf-trim-reset");
+  const trimInfo = $("cvf-trim-info");
+  const trimError = $("cvf-trim-error");
+
   const workPanel = $("cvf-working");
   const progressFill = $("cvf-progress");
   const progressPct = $("cvf-progress-pct");
@@ -144,7 +129,7 @@ export function initCompressor(): void {
   if (!dropzone || !fileInput) return; // not the /app page
 
   // ---- state ----
-  let mode: Mode = "video";
+  let mode: MediaMode = "video";
   let file: File | null = null;
   let durationSec = 0;
   let vidW = 0;
@@ -152,61 +137,27 @@ export function initCompressor(): void {
   let targetMB = 25; // video target
   let audioKbps = 128; // audio target
   let audioFmt: AudioFmt = "mp3";
-  let ffmpeg: FFmpeg | null = null;
-  let ffmpegLoaded = false;
   let resultUrl: string | null = null;
   let cancelled = false;
+  // ---- trim state (null/null = no trim) ----
+  let trimStart: number | null = null;
+  let trimEnd: number | null = null;
+  let previewUrl: string | null = null;
 
   const show = (el: HTMLElement | null) => el?.classList.remove("hidden");
   const hide = (el: HTMLElement | null) => el?.classList.add("hidden");
 
-  // Accepted extensions per mode (the picker's `accept` is a hint; this regex is
-  // the real guard in ingest()). Audio list is broad on purpose — ffmpeg decodes
-  // far more than the browser can preview, and we degrade gracefully if a format
-  // can't be probed for duration.
-  const AUDIO_EXT = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|wma|aiff?|alac|caf|amr|m4b)$/i;
-  const VIDEO_EXT = /\.(mp4|mov|webm|mkv|avi|m4v|mpe?g|wmv|flv|3gp|ts|ogv)$/i;
-
-  // ---- load ffmpeg lazily (single-threaded core; see BASE_ST note above) ----
-  async function ensureFfmpeg(): Promise<FFmpeg> {
-    if (ffmpeg && ffmpegLoaded) return ffmpeg;
-    ffmpeg = new FFmpeg();
-    ffmpeg.on("progress", ({ progress }) => {
-      if (cancelled) return;
-      const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
-      if (progressFill) progressFill.style.width = `${pct}%`;
-      if (progressPct) progressPct.textContent = `${pct}%`;
-      progressFill?.classList.remove("is-indeterminate");
-    });
-
-    // Always the single-threaded core: the multi-threaded core crashes mid-encode
-    // in real browsers (`function signature mismatch`) regardless of version.
-    const cfg: { coreURL: string; wasmURL: string } = {
-      coreURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.wasm`, "application/wasm"),
-    };
-    // Guard against a silent hang: if load() doesn't resolve in 45s, reject so
-    // the UI can show an error + retry instead of spinning forever.
-    await Promise.race([
-      ffmpeg.load(cfg),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("ffmpeg load timed out after 45s")),
-          45000,
-        ),
-      ),
-    ]);
-    ffmpegLoaded = true;
-    return ffmpeg;
+  // ---- progress plumbing (engine owns the ffmpeg lifecycle) ----
+  function onProgress(pct: number): void {
+    if (cancelled) return;
+    if (progressFill) progressFill.style.width = `${pct}%`;
+    if (progressPct) progressPct.textContent = `${pct}%`;
+    progressFill?.classList.remove("is-indeterminate");
   }
 
   // ---- ingest a chosen file ----
-  function ingest(f: File): void {
-    const okType =
-      mode === "video"
-        ? f.type.startsWith("video/") || VIDEO_EXT.test(f.name)
-        : f.type.startsWith("audio/") || AUDIO_EXT.test(f.name);
-    if (!okType) {
+  async function ingest(f: File): Promise<void> {
+    if (!isAcceptable(f, mode)) {
       alert(
         mode === "video"
           ? "Please choose a video file (mp4, mov, webm, mkv, avi)."
@@ -216,35 +167,8 @@ export function initCompressor(): void {
     }
     file = f;
     cancelled = false;
+    clearTrim();
     if (origName) origName.textContent = f.name;
-
-    // Probe duration (and dimensions for video) with a throwaway media element —
-    // no upload. A <video> element loads audio-only files fine and reports
-    // duration (videoWidth/Height stay 0), so one probe path covers both modes.
-    const probe = document.createElement("video");
-    probe.preload = "metadata";
-    const url = URL.createObjectURL(f);
-    probe.onloadedmetadata = () => {
-      durationSec = probe.duration || 0;
-      vidW = probe.videoWidth || 0;
-      vidH = probe.videoHeight || 0;
-      URL.revokeObjectURL(url);
-      if (origMeta) {
-        const dims = mode === "video" && vidW && vidH ? `${vidW}×${vidH} · ` : "";
-        origMeta.textContent = `${fmtBytes(f.size)} · ${dims}${fmtDuration(durationSec)}`;
-      }
-      updateEstimate();
-    };
-    probe.onerror = () => {
-      URL.revokeObjectURL(url);
-      // ffmpeg can still compress formats the browser can't preview (e.g. flac
-      // on some browsers) — duration just stays unknown, which only affects the
-      // estimate text, not the actual job.
-      durationSec = 0;
-      if (origMeta) origMeta.textContent = `${fmtBytes(f.size)} · (metadata unavailable)`;
-      updateEstimate();
-    };
-    probe.src = url;
 
     hide($("cvf-intro"));
     show(setupPanel);
@@ -258,12 +182,138 @@ export function initCompressor(): void {
     }
     hide(resultPanel);
     hide(workPanel);
+
+    // Source preview for the trim panel — created up front so "use playhead"
+    // works the moment the user expands it. Revoked in reset().
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(f);
+    const player = mode === "video" ? trimPreviewVideo : trimPreviewAudio;
+    const other = mode === "video" ? trimPreviewAudio : trimPreviewVideo;
+    other?.removeAttribute("src");
+    hide(other);
+    show(player);
+    if (player) player.src = previewUrl;
+
+    // Probe metadata (browser-native, no ffmpeg, no upload).
+    const meta = await probeMedia(f);
+    durationSec = meta.durationSec;
+    vidW = meta.width;
+    vidH = meta.height;
+    if (origMeta) {
+      if (!durationSec) {
+        origMeta.textContent = `${fmtBytes(f.size)} · (metadata unavailable)`;
+      } else {
+        const dims = mode === "video" && vidW && vidH ? `${vidW}×${vidH} · ` : "";
+        origMeta.textContent = `${fmtBytes(f.size)} · ${dims}${fmtDuration(durationSec)}`;
+      }
+    }
+    // Seed the trim inputs with the full range so the fields are never blank.
+    if (durationSec) {
+      if (trimStartInput) trimStartInput.value = formatTimecode(0);
+      if (trimEndInput) trimEndInput.value = formatTimecode(durationSec);
+    }
+    updateTrimInfo();
+    updateEstimate();
+  }
+
+  // ---- trim helpers ----
+  /**
+   * The duration the OUTPUT will actually have. Every bitrate/size calculation
+   * must use this, not durationSec — otherwise trimming 60s→10s while a size
+   * preset is active leaves the estimate and the "target too small" warning
+   * describing a file that will never exist.
+   */
+  function effectiveDuration(): number {
+    if (trimStart !== null && trimEnd !== null) return trimEnd - trimStart;
+    return durationSec;
+  }
+  const isTrimmed = (): boolean => trimStart !== null && trimEnd !== null;
+
+  function clearTrim(): void {
+    trimStart = null;
+    trimEnd = null;
+    if (trimStartInput) trimStartInput.value = durationSec ? formatTimecode(0) : "";
+    if (trimEndInput) trimEndInput.value = durationSec ? formatTimecode(durationSec) : "";
+    hide(trimError);
+    updateTrimInfo();
+    updateEstimate();
+  }
+
+  /**
+   * Read + validate both timecode fields. Sets trimStart/trimEnd (or clears them
+   * when the range is the full file, so we skip -ss/-t entirely) and returns
+   * whether the current input is VALID. Invalid input disables Compress rather
+   * than alerting — inline errors, no modal interruptions.
+   */
+  function readTrim(): boolean {
+    if (!durationSec) return true; // can't validate without a duration; let ffmpeg try
+    const rawS = trimStartInput?.value ?? "";
+    const rawE = trimEndInput?.value ?? "";
+    const s = parseTimecode(rawS);
+    const e = parseTimecode(rawE);
+
+    const fail = (msg: string): boolean => {
+      if (trimError) {
+        trimError.textContent = msg;
+        show(trimError);
+      }
+      trimStart = null;
+      trimEnd = null;
+      return false;
+    };
+
+    if (s === null || e === null) return fail("Use mm:ss or hh:mm:ss (e.g. 0:12 or 1:02:30).");
+    if (s < 0 || e < 0) return fail("Times can't be negative.");
+    if (e > durationSec + 0.25) return fail(`End is past the end of the file (${fmtDuration(durationSec)}).`);
+    if (s >= e) return fail("Start must be before end.");
+    if (e - s < 0.5) return fail("That's shorter than half a second — pick a wider range.");
+
+    hide(trimError);
+    // Full range → treat as "no trim" so we don't pay for pointless -ss/-t.
+    if (s <= 0.05 && e >= durationSec - 0.05) {
+      trimStart = null;
+      trimEnd = null;
+    } else {
+      trimStart = s;
+      trimEnd = e;
+    }
+    return true;
+  }
+
+  function updateTrimInfo(): void {
+    if (!trimInfo) return;
+    if (!durationSec) {
+      trimInfo.textContent = "";
+      return;
+    }
+    trimInfo.textContent = isTrimmed()
+      ? `Trimmed length: ${fmtDuration(effectiveDuration())} (from ${fmtDuration(durationSec)})`
+      : `Full file: ${fmtDuration(durationSec)}`;
+  }
+
+  function onTrimInput(): void {
+    const ok = readTrim();
+    if (compressBtn) {
+      (compressBtn as HTMLButtonElement).disabled = !ok;
+      compressBtn.classList.toggle("opacity-50", !ok);
+      compressBtn.classList.toggle("pointer-events-none", !ok);
+    }
+    updateTrimInfo();
+    updateEstimate();
+  }
+
+  /** Current playhead of whichever preview element is live for this mode. */
+  function playheadSec(): number {
+    const player = mode === "video" ? trimPreviewVideo : trimPreviewAudio;
+    return player?.currentTime ?? 0;
   }
 
   // ---- estimate + warnings ----
   function targetVideoKbps(): number {
     const audioBudget = 128;
-    const totalKbps = (targetMB * 8192) / Math.max(1, durationSec);
+    // effectiveDuration(), not durationSec — a trim shrinks the content we have
+    // to fit into targetMB, so the available bitrate goes UP proportionally.
+    const totalKbps = (targetMB * 8192) / Math.max(1, effectiveDuration());
     return Math.max(120, Math.floor(totalKbps - audioBudget));
   }
   // Approx source audio bitrate (kbps) from bytes ÷ duration, same 1024-based
@@ -276,12 +326,14 @@ export function initCompressor(): void {
   function updateEstimate(): void {
     if (!estimateEl) return;
 
+    const trimNote = isTrimmed() ? ` · trimmed to ${fmtDuration(effectiveDuration())}` : "";
+
     if (mode === "audio") {
       if (!durationSec) {
         estimateEl.textContent = `Target ≈ ${audioKbps} kbps ${audioFmt.toUpperCase()}`;
       } else {
-        const outMB = (audioKbps * durationSec) / 8192;
-        estimateEl.textContent = `Target ≈ ${outMB.toFixed(1)} MB · ${audioKbps} kbps ${audioFmt.toUpperCase()} · ${fmtDuration(durationSec)}`;
+        const outMB = (audioKbps * effectiveDuration()) / 8192;
+        estimateEl.textContent = `Target ≈ ${outMB.toFixed(1)} MB · ${audioKbps} kbps ${audioFmt.toUpperCase()} · ${fmtDuration(effectiveDuration())}${trimNote ? " (trimmed)" : ""}`;
       }
       if (warnEl) {
         const src = approxSourceKbps();
@@ -302,7 +354,7 @@ export function initCompressor(): void {
       return;
     }
     const vk = targetVideoKbps();
-    estimateEl.textContent = `Target ≈ ${targetMB} MB · video bitrate ~${vk} kbps`;
+    estimateEl.textContent = `Target ≈ ${targetMB} MB · video bitrate ~${vk} kbps${trimNote}`;
     // Warn if the target is implausibly small for the content.
     if (warnEl) {
       if (vk <= 150) {
@@ -318,6 +370,7 @@ export function initCompressor(): void {
   // ---- run compression ----
   async function compress(): Promise<void> {
     if (!file) return;
+    if (!readTrim()) return; // invalid trim range — inline error already shown
     cancelled = false;
     if (resultHint) resultHint.textContent = "";
     hide(setupPanel);
@@ -332,14 +385,11 @@ export function initCompressor(): void {
     if (workStatus)
       workStatus.textContent = `Loading the compressor (one-time, ~25 MB)… your ${noun} stays on your device.`;
 
-    let ff: FFmpeg;
     try {
-      ff = await ensureFfmpeg();
+      await ensureFfmpeg(onProgress);
     } catch (err) {
       console.error("[cvf] ffmpeg load failed", err);
-      // Reset so a retry re-attempts a fresh load.
-      ffmpeg = null;
-      ffmpegLoaded = false;
+      terminateFfmpeg();
       // Return the user to the setup panel with a visible error + retry path.
       hide(workPanel);
       show(setupPanel);
@@ -357,10 +407,19 @@ export function initCompressor(): void {
     const inName = "input" + (file.name.match(/\.[a-z0-9]+$/i)?.[0] ?? (mode === "video" ? ".mp4" : ".bin"));
     const outName = mode === "video" ? "output.mp4" : `output.${audioFmt}`;
     try {
-      const buf = new Uint8Array(await file.arrayBuffer());
-      await ff.writeFile(inName, buf);
+      // TRIM: -ss goes BEFORE -i (instant input seek — after -i it would decode
+      // and discard everything up to the mark). -t <duration>, never -to
+      // <endpoint>: -to's meaning relative to a preceding -ss has changed
+      // between ffmpeg versions, so we compute the duration ourselves.
+      const inputArgs: string[] = [];
+      if (isTrimmed()) {
+        inputArgs.push("-ss", String(trimStart));
+      }
+      const outputArgs: string[] = [];
+      if (isTrimmed()) {
+        outputArgs.push("-t", String(effectiveDuration()));
+      }
 
-      const args = ["-i", inName];
       if (mode === "video") {
         const vKbps = targetVideoKbps();
         // Resolution downscale (never upscale).
@@ -369,10 +428,10 @@ export function initCompressor(): void {
           const targetH = parseInt(res, 10);
           if (vidH && targetH < vidH) {
             // scale by height, keep aspect, ensure even width
-            args.push("-vf", `scale=-2:${targetH}`);
+            outputArgs.push("-vf", `scale=-2:${targetH}`);
           }
         }
-        args.push(
+        outputArgs.push(
           "-c:v", "libx264",
           "-b:v", `${vKbps}k`,
           "-maxrate", `${Math.floor(vKbps * 1.45)}k`,
@@ -381,36 +440,33 @@ export function initCompressor(): void {
           "-c:a", "aac",
           "-b:a", "128k",
           "-movflags", "+faststart",
-          outName,
         );
       } else {
         // AUDIO: drop any video/cover-art stream (-vn) so libx264 never fires on
         // an embedded still, then re-encode the audio at the chosen bitrate.
         const codec = audioFmt === "mp3" ? "libmp3lame" : "aac";
-        args.push("-vn", "-c:a", codec, "-b:a", `${audioKbps}k`);
-        if (audioFmt === "m4a") args.push("-movflags", "+faststart");
-        args.push(outName);
+        outputArgs.push("-vn", "-c:a", codec, "-b:a", `${audioKbps}k`);
+        if (audioFmt === "m4a") outputArgs.push("-movflags", "+faststart");
       }
 
-      await ff.exec(args);
-      if (cancelled) return;
-
-      const data = (await ff.readFile(outName)) as Uint8Array;
-      // Copy into a fresh ArrayBuffer so the Blob owns clean memory.
-      const out = new Uint8Array(data.byteLength);
-      out.set(data);
       const mime =
         mode === "video"
           ? "video/mp4"
           : audioFmt === "mp3"
             ? "audio/mpeg"
             : "audio/mp4";
-      const blob = new Blob([out], { type: mime });
 
-      // cleanup vfs
-      try { await ff.deleteFile(inName); } catch { /* ignore */ }
-      try { await ff.deleteFile(outName); } catch { /* ignore */ }
-
+      const blob = await runJob({
+        file,
+        inName,
+        outName,
+        inputArgs,
+        outputArgs,
+        mime,
+        onProgress,
+        isCancelled: () => cancelled,
+      });
+      if (!blob || cancelled) return;
       showResult(blob);
     } catch (err) {
       if (cancelled) return;
@@ -454,7 +510,7 @@ export function initCompressor(): void {
       } else {
         // Already-compressed source: re-encoding didn't help. Be honest rather
         // than showing a misleading "0% smaller". The original is the better file.
-        reduceEl.textContent = "Already well compressed";
+        reduceEl.textContent = isTrimmed() ? "Trimmed" : "Already well compressed";
         reduceEl.style.color = "var(--color-fg)";
         if (resultHint)
           resultHint.textContent =
@@ -466,9 +522,10 @@ export function initCompressor(): void {
     if (downloadBtn) {
       downloadBtn.href = resultUrl;
       const fallback = mode === "video" ? "video" : "audio";
-      const stem = (file?.name ?? fallback).replace(/\.[a-z0-9]+$/i, "");
+      const stem = fileStem(file?.name ?? fallback, fallback);
       const ext = mode === "video" ? "mp4" : audioFmt;
-      downloadBtn.download = `${stem}-compressed.${ext}`;
+      const mid = isTrimmed() ? "-trimmed" : "";
+      downloadBtn.download = `${stem}${mid}-compressed.${ext}`;
     }
   }
 
@@ -476,9 +533,26 @@ export function initCompressor(): void {
     cancelled = true;
     file = null;
     durationSec = 0;
+    trimStart = null;
+    trimEnd = null;
     if (resultUrl) {
       URL.revokeObjectURL(resultUrl);
       resultUrl = null;
+    }
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrl = null;
+    }
+    trimPreviewVideo?.removeAttribute("src");
+    trimPreviewAudio?.removeAttribute("src");
+    if (trimDetails) trimDetails.open = false;
+    if (trimStartInput) trimStartInput.value = "";
+    if (trimEndInput) trimEndInput.value = "";
+    hide(trimError);
+    updateTrimInfo();
+    if (compressBtn) {
+      (compressBtn as HTMLButtonElement).disabled = false;
+      compressBtn.classList.remove("opacity-50", "pointer-events-none");
     }
     if (resultVideo) resultVideo.removeAttribute("src");
     if (resultAudio) resultAudio.removeAttribute("src");
@@ -510,21 +584,12 @@ export function initCompressor(): void {
         ? "MP4, MOV, WebM, MKV, AVI · nothing is uploaded"
         : "MP3, M4A, WAV, FLAC, OGG, Opus · nothing is uploaded";
     if (pickLabel) pickLabel.textContent = isVideo ? "Choose a video" : "Choose audio";
-    // audio/* alone is unreliable on Windows: Chrome resolves it against the
-    // registry's per-extension Content-Type, and many audio extensions (.flac,
-    // .opus, .m4a, .oga, .aiff, .wma, .caf…) often have NO registry MIME → the
-    // picker shows an EMPTY list. Pinning explicit extensions matches by name and
-    // bypasses the registry entirely. List mirrors AUDIO_EXT. Video stays bare
-    // ("video/*") on purpose — see the mobile double-picker fix in the skill.
-    fileInput?.setAttribute(
-      "accept",
-      isVideo
-        ? "video/*"
-        : "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.wma,.aiff,.aif,.alac,.caf,.amr,.m4b",
-    );
+    // The Windows empty-picker trap and the iOS double-picker trap are both
+    // encoded in acceptFor() — see media-file.ts. Do not inline this.
+    fileInput?.setAttribute("accept", acceptFor(mode));
     if (compressBtn) compressBtn.textContent = isVideo ? "Compress video" : "Compress audio";
   }
-  function switchMode(next: Mode): void {
+  function switchMode(next: MediaMode): void {
     if (next === mode) return;
     // Cancel any in-flight job + free the engine so the new mode starts clean.
     cancelled = true;
@@ -571,7 +636,7 @@ export function initCompressor(): void {
   dropzone.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", () => {
     const f = fileInput.files?.[0];
-    if (f) ingest(f);
+    if (f) void ingest(f);
   });
 
   // mode tabs
@@ -601,7 +666,7 @@ export function initCompressor(): void {
     dragDepth = 0;
     dropzone.classList.remove("is-dragover");
     const f = (e as DragEvent).dataTransfer?.files?.[0];
-    if (f) ingest(f);
+    if (f) void ingest(f);
   });
 
   // build video preset buttons
@@ -655,18 +720,37 @@ export function initCompressor(): void {
   compressBtn?.addEventListener("click", () => void compress());
   cancelBtn?.addEventListener("click", () => {
     cancelled = true;
-    try {
-      ffmpeg?.terminate();
-    } catch { /* ignore */ }
-    ffmpeg = null;
-    ffmpegLoaded = false;
+    terminateFfmpeg();
     reset();
   });
   againBtn?.addEventListener("click", reset);
   $("cvf-again2")?.addEventListener("click", reset);
 
+  // ---- trim wiring ----
+  trimStartInput?.addEventListener("input", onTrimInput);
+  trimEndInput?.addEventListener("input", onTrimInput);
+  // "Use current playhead" — the ergonomic core of the trim UI. Scrub the
+  // preview to the frame you want, click, done. No waveform needed.
+  trimSetStart?.addEventListener("click", () => {
+    if (trimStartInput) trimStartInput.value = formatTimecode(playheadSec());
+    onTrimInput();
+  });
+  trimSetEnd?.addEventListener("click", () => {
+    if (trimEndInput) trimEndInput.value = formatTimecode(playheadSec());
+    onTrimInput();
+  });
+  trimReset?.addEventListener("click", (e) => {
+    e.preventDefault();
+    clearTrim();
+    onTrimInput();
+  });
+
   // defaults
-  applyModeCopy(); // video by default
+  // Deep link: /app/?mode=audio starts on the Audio tab (used by the homepage
+  // "Compress audio" CTA and any audio-targeted landing copy).
+  const wantAudio = new URLSearchParams(location.search).get("mode") === "audio";
+  if (wantAudio) mode = "audio";
+  applyModeCopy();
   selectPreset("email");
   selectAudioPreset("128");
 }

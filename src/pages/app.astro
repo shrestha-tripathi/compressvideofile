@@ -137,6 +137,62 @@ const webAppSchema = {
         </div>
       </div>
 
+      {/* ---- TRIM (optional, both modes) ----
+           Collapsed by default: the "drop → preset → go" path must stay
+           friction-free. Expanding reveals a source preview so the two
+           "use current playhead" buttons can do the work a waveform would. */}
+      <details id="cvf-trim" class="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-3">
+        <summary class="cursor-pointer list-none text-sm font-semibold text-[var(--color-fg)] marker:hidden">
+          <span class="inline-flex items-center gap-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--color-accent)]" aria-hidden="true"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+            Trim (optional) — cut to just the part you need
+          </span>
+        </summary>
+
+        <div class="mt-4">
+          <video id="cvf-trim-video" controls playsinline preload="metadata" class="max-h-[260px] w-full rounded-lg bg-black"></video>
+          <audio id="cvf-trim-audio" controls preload="metadata" class="hidden w-full"></audio>
+
+          <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="cvf-trim-start" class="block text-xs font-medium text-[var(--color-fg-muted)]">Start</label>
+              <div class="mt-2 flex gap-2">
+                <input id="cvf-trim-start" type="text" inputmode="numeric" placeholder="0:00"
+                  class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm tabular-nums text-[var(--color-fg)] outline-none focus:border-[var(--color-accent)]" />
+                <button id="cvf-trim-set-start" type="button" class="shrink-0 rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+                  Playhead
+                </button>
+              </div>
+            </div>
+            <div>
+              <label for="cvf-trim-end" class="block text-xs font-medium text-[var(--color-fg-muted)]">End</label>
+              <div class="mt-2 flex gap-2">
+                <input id="cvf-trim-end" type="text" inputmode="numeric" placeholder="0:30"
+                  class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm tabular-nums text-[var(--color-fg)] outline-none focus:border-[var(--color-accent)]" />
+                <button id="cvf-trim-set-end" type="button" class="shrink-0 rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+                  Playhead
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p id="cvf-trim-info" class="text-xs text-[var(--color-fg-muted)]"></p>
+            <button id="cvf-trim-reset" type="button" class="text-xs font-medium text-[var(--color-accent)] hover:underline">
+              Reset trim
+            </button>
+          </div>
+          <p id="cvf-trim-error" class="mt-2 hidden rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-xs text-[var(--color-warning)]"></p>
+
+          <p class="mt-3 text-xs text-[var(--color-fg-subtle)]">
+            Scrub the preview, then hit <strong class="text-[var(--color-fg-muted)]">Playhead</strong> to
+            drop a marker. Just want to cut without re-encoding?
+            <a href="/trim/" class="text-[var(--color-accent)] hover:underline">Use the trim tool</a> —
+            it's instant and lossless.
+          </p>
+        </div>
+      </details>
+
       <p id="cvf-estimate" class="mt-4 text-xs text-[var(--color-fg-subtle)]"></p>
       <p id="cvf-warn" class="mt-2 hidden rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-xs text-[var(--color-warning)]"></p>
 
