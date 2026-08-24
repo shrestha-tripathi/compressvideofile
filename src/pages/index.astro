@@ -18,7 +18,15 @@ const webAppSchema = {
   "@type": "WebApplication",
   "@id": `${site.url}/#webapp`,
   name: site.name,
-  alternateName: ["Video Compressor", "Compress video online", "Compress video for WhatsApp"],
+  alternateName: [
+    "Video Compressor",
+    "Audio Compressor",
+    "Compress video online",
+    "Compress audio online",
+    "Compress video for WhatsApp",
+    "Trim video online",
+    "Trim audio online",
+  ],
   url: site.url,
   description: site.description,
   applicationCategory: "MultimediaApplication",
@@ -31,6 +39,9 @@ const webAppSchema = {
   },
   featureList: [
     "Compress video 100% in your browser — never uploaded",
+    "Compress audio to MP3 or M4A at any bitrate",
+    "Trim video and audio with custom start and end timestamps",
+    "Lossless trimming — cut without re-encoding",
     "WhatsApp, email, and Discord size presets",
     "Custom target file size and resolution",
     "No watermark, no signup, no install",
@@ -62,6 +73,18 @@ const features = [
     icon: `<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>`,
   },
   {
+    title: "Audio too — MP3, M4A, WAV",
+    body:
+      "Not just video. Shrink an MP3, M4A, WAV, FLAC, OGG or a WhatsApp voice note by picking a bitrate — 128 kbps for music, 64 kbps for voice.",
+    icon: `<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>`,
+  },
+  {
+    title: "Trim without re-encoding",
+    body:
+      "Cut a clip to an exact start and end time. The fast mode copies the streams straight through — instant, and with zero quality loss.",
+    icon: `<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>`,
+  },
+  {
     title: "No signup, no install",
     body:
       "There's no account to create and nothing to download. Open the page, drop a video, get a smaller file. That's the whole flow.",
@@ -84,18 +107,18 @@ const features = [
 const steps = [
   {
     n: "1",
-    title: "Drop your video",
-    body: "Drag a clip in or tap to pick one — MP4, MOV, WebM, MKV, AVI. It loads into your browser, not a server.",
+    title: "Drop your video or audio",
+    body: "Drag a file in or tap to pick one — MP4, MOV, WebM, MKV, AVI, or MP3, M4A, WAV, FLAC, OGG. It loads into your browser, not a server.",
   },
   {
     n: "2",
-    title: "Pick a target size",
-    body: "Choose a preset (WhatsApp, Email, Discord…) or set a custom size and resolution. We compute the right bitrate for you.",
+    title: "Pick a size — and trim if you want",
+    body: "Choose a preset (WhatsApp, Email, Discord…), a bitrate for audio, or a custom size. Optionally set a start and end time to keep just one part.",
   },
   {
     n: "3",
     title: "Download the smaller file",
-    body: "Compression runs on your device with a live progress bar. Preview the result and download — all without an upload.",
+    body: "Everything runs on your device with a live progress bar. Preview the result and download — all without a single upload.",
   },
 ];
 
@@ -104,6 +127,8 @@ const faqTeasers = [
   { q: "Does my video get uploaded?", a: "No. Your video is processed on your device and never leaves your browser. Only the compressor's WebAssembly code loads from a CDN — never your file." },
   { q: "How do I compress a video for WhatsApp?", a: "Drop your video, tap the “WhatsApp (16 MB)” preset, and download. It fits WhatsApp's status and chat limits — without uploading it anywhere first." },
   { q: "Will it lose quality?", a: "Some, like any compression — but you control the trade-off. Bigger target size = higher quality. For most clips the drop is barely noticeable." },
+  { q: "Can I compress an MP3 or a voice note?", a: "Yes. Switch to the Audio tab and pick a bitrate — MP3, M4A, WAV, FLAC, OGG and Opus all work, including WhatsApp voice notes. Output is MP3 or M4A." },
+  { q: "Can I cut a clip without losing quality?", a: "Yes — the trim tool's fast mode copies the audio and video streams straight through instead of re-encoding, so it finishes almost instantly with zero quality loss." },
 ];
 ---
 
@@ -120,16 +145,17 @@ const faqTeasers = [
     <section class="border-b border-[var(--color-border)]">
       <div class="mx-auto max-w-6xl px-4 sm:px-6 py-20 md:py-28">
         <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">
-          Video compressor · 100% in your browser · Never uploads
+          Video &amp; audio compressor · 100% in your browser · Never uploads
         </p>
         <h1 class="mt-4 max-w-4xl text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight">
-          Compress any video — right in your browser.
+          Compress any video or audio — right in your browser.
           <span class="text-[var(--color-accent)]"> It never uploads.</span>
         </h1>
         <p class="mt-6 max-w-2xl text-lg md:text-xl text-[var(--color-fg-muted)]">
-          Shrink MP4, MOV, and WebM files for WhatsApp, email, or Discord. Free,
-          no watermark, no signup. Your video is processed on your device and
-          never leaves your browser.
+          Shrink MP4, MOV and WebM video — or MP3, M4A, WAV and FLAC audio — for
+          WhatsApp, email or Discord. Trim any clip to an exact start and end
+          time. Free, no watermark, no signup. Your file is processed on your
+          device and never leaves your browser.
         </p>
         <div class="mt-9 flex flex-wrap gap-3">
           <a
@@ -139,10 +165,16 @@ const faqTeasers = [
             Compress a video — free
           </a>
           <a
-            href="/how-it-works/"
+            href="/app/?mode=audio"
             class="inline-flex h-12 items-center rounded-lg border border-[var(--color-border-strong)] px-6 text-sm font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]"
           >
-            How it works
+            Compress audio
+          </a>
+          <a
+            href="/trim/"
+            class="inline-flex h-12 items-center rounded-lg border border-[var(--color-border-strong)] px-6 text-sm font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]"
+          >
+            Trim a clip
           </a>
         </div>
 
@@ -167,6 +199,74 @@ const faqTeasers = [
           <span class="text-[var(--color-fg-muted)]">compress a video for WhatsApp without uploading it</span>
           to any website first.
         </p>
+      </div>
+    </section>
+
+    <!-- WHAT'S IN THE TOOLKIT -->
+    <section class="border-b border-[var(--color-border)]">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 py-16 md:py-24">
+        <p class="text-sm font-medium uppercase tracking-[0.08em] text-[var(--color-fg-subtle)]">The toolkit</p>
+        <h2 class="mt-3 max-w-2xl text-3xl md:text-4xl font-semibold tracking-tight">
+          Three tools. One rule:
+          <span class="text-[var(--color-fg-muted)]">nothing is ever uploaded.</span>
+        </h2>
+        <div class="mt-12 grid gap-5 md:grid-cols-3">
+          {[
+            {
+              href: "/app/",
+              tag: "Video",
+              title: "Compress video",
+              body: "Hit a target file size for WhatsApp, email or Discord. Pick a resolution, we work out the bitrate.",
+              cta: "Compress a video",
+              icon: `<path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/>`,
+              badge: null,
+            },
+            {
+              href: "/app/?mode=audio",
+              tag: "Audio",
+              title: "Compress audio",
+              body: "MP3, M4A, WAV, FLAC, OGG, Opus and voice notes. Choose a bitrate — 128 kbps for music, 64 for speech.",
+              cta: "Compress audio",
+              icon: `<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>`,
+              badge: null,
+            },
+            {
+              href: "/trim/",
+              tag: "Video & audio",
+              title: "Trim & cut",
+              body: "Keep just the part you need. Fast mode copies the streams instead of re-encoding — instant, and lossless.",
+              cta: "Trim a clip",
+              icon: `<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>`,
+              badge: "New",
+            },
+          ].map((tool) => (
+            <a
+              href={tool.href}
+              class="group flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6 md:p-8 transition-colors hover:border-[var(--color-accent)]"
+            >
+              <div class="flex items-center gap-3">
+                <span
+                  class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-[var(--color-accent)]"
+                  style="background-color: color-mix(in srgb, var(--color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-accent) 22%, transparent);"
+                  aria-hidden="true"
+                >
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={tool.icon} />
+                </span>
+                <span class="text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]">{tool.tag}</span>
+                {tool.badge && (
+                  <span class="ml-auto rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-xs font-semibold text-[var(--color-accent-fg)]">
+                    {tool.badge}
+                  </span>
+                )}
+              </div>
+              <h3 class="mt-5 text-lg font-semibold text-[var(--color-fg)]">{tool.title}</h3>
+              <p class="mt-2 grow text-sm leading-relaxed text-[var(--color-fg-muted)]">{tool.body}</p>
+              <span class="mt-5 text-sm font-semibold text-[var(--color-accent)]">
+                {tool.cta} <span class="transition-transform group-hover:translate-x-0.5 inline-block">→</span>
+              </span>
+            </a>
+          ))}
+        </div>
       </div>
     </section>
 
@@ -303,18 +403,27 @@ const faqTeasers = [
     <section>
       <div class="mx-auto max-w-6xl px-4 sm:px-6 py-20 md:py-28 text-center">
         <h2 class="text-3xl md:text-5xl font-semibold tracking-tight">
-          Shrink your next video without uploading it.
+          Shrink or cut your next file without uploading it.
         </h2>
         <p class="mx-auto mt-5 max-w-xl text-lg text-[var(--color-fg-muted)]">
-          Open the compressor, drop a clip, pick a size. It runs on your device,
-          finishes in seconds, and the file never leaves your browser.
+          Open the app, drop a video or an audio file, pick a size — or just trim
+          it. Everything runs on your device, finishes in seconds, and the file
+          never leaves your browser.
         </p>
-        <a
-          href="/app/"
-          class="mt-10 inline-flex h-12 items-center rounded-lg bg-[var(--color-accent)] px-8 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
-        >
-          Compress a video — free
-        </a>
+        <div class="mt-10 flex flex-wrap justify-center gap-3">
+          <a
+            href="/app/"
+            class="inline-flex h-12 items-center rounded-lg bg-[var(--color-accent)] px-8 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+          >
+            Compress a file — free
+          </a>
+          <a
+            href="/trim/"
+            class="inline-flex h-12 items-center rounded-lg border border-[var(--color-border-strong)] px-8 text-sm font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]"
+          >
+            Trim a clip
+          </a>
+        </div>
       </div>
     </section>
   </main>
