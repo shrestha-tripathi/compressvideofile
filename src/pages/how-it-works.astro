@@ -145,6 +145,79 @@ const howToSchema = {
 
     <hr class="my-12 border-[var(--color-border)]" />
 
+    <!-- AUDIO -->
+    <section class="space-y-5 leading-relaxed text-[var(--color-fg-muted)]">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
+        Audio works the same way
+      </h2>
+      <p>
+        The same engine handles audio. Switch to the
+        <strong class="text-[var(--color-fg)]">Audio</strong> tab and you can drop
+        in an MP3, M4A, AAC, WAV, FLAC, OGG or Opus file — including WhatsApp
+        voice notes — and shrink it without it ever leaving your device.
+      </p>
+      <p>
+        The one difference is what you aim at. Video targets a
+        <em>file size</em>, because that's the constraint you actually run into
+        (“it has to fit in 16 MB”). Audio targets a
+        <strong class="text-[var(--color-fg)]">bitrate</strong> instead, because
+        that's the native mental model for sound: 192 or 128 kbps for music, 64
+        kbps for speech. Size then follows predictably from the length of the
+        file. Output is MP3, which plays everywhere, or M4A/AAC, which is smaller
+        at the same quality.
+      </p>
+    </section>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
+    <!-- TRIMMING -->
+    <section class="space-y-5 leading-relaxed text-[var(--color-fg-muted)]">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
+        Trimming, and why it's free of quality loss
+      </h2>
+      <p>
+        Compressing a video means decoding every frame and re-encoding it at a
+        lower bitrate. That's real work, and it costs a little quality.
+        <strong class="text-[var(--color-fg)]">Trimming doesn't have to do either.</strong>
+      </p>
+      <p>
+        A video file is a container holding already-encoded streams. To cut
+        between two points, you can simply copy those streams into a new
+        container and leave the encoded data untouched. Nothing is decoded,
+        nothing is re-encoded — which is why the
+        <a href="/trim/" class="text-[var(--color-accent)] hover:underline">trim tool's</a>
+        fast mode finishes a large clip in about a second and returns a file
+        that is bit-for-bit as good as the original.
+      </p>
+      <p>
+        There's one honest catch. Compressed video only stores complete pictures
+        every few seconds — those are
+        <strong class="text-[var(--color-fg)]">keyframes</strong>; every frame in
+        between is stored as a difference from the one before it. A stream copy
+        therefore has to begin at a keyframe, because starting anywhere else
+        would leave the first frames with nothing to be different <em>from</em>.
+        If your start time lands between two keyframes, the cut begins at the
+        earlier one and you get a slightly longer clip. We tell you when that
+        happens rather than quietly handing you something you didn't ask for.
+      </p>
+      <p>
+        When the cut has to be exact, <strong class="text-[var(--color-fg)]">Precise
+        mode</strong> re-encodes the video so it starts on the exact frame you
+        chose. It's slower and technically lossy, like any re-encode — a genuine
+        trade, which is why it's a choice rather than a default. Audio always
+        uses the lossless path: audio frames are short enough that a stream copy
+        is effectively sample-accurate, so there's no trade to make.
+      </p>
+      <p>
+        You can also trim while compressing. The compressor has an optional
+        <strong class="text-[var(--color-fg)]">Trim</strong> panel — useful when a
+        long clip won't fit a size limit, since cutting it down means the
+        remaining footage gets a much larger share of the bitrate.
+      </p>
+    </section>
+
+    <hr class="my-12 border-[var(--color-border)]" />
+
     <!-- PRIVACY -->
     <section class="space-y-5 leading-relaxed text-[var(--color-fg-muted)]">
       <h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
@@ -168,12 +241,20 @@ const howToSchema = {
         Drop in a clip and watch the progress bar move — no upload, no waiting on
         a server queue.
       </p>
-      <a
-        href="/app/"
-        class="mt-6 inline-flex h-10 items-center rounded-md bg-[var(--color-accent)] px-5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
-      >
-        Compress a video →
-      </a>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a
+          href="/app/"
+          class="inline-flex h-10 items-center rounded-md bg-[var(--color-accent)] px-5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90"
+        >
+          Compress a file →
+        </a>
+        <a
+          href="/trim/"
+          class="inline-flex h-10 items-center rounded-md border border-[var(--color-border-strong)] px-5 text-sm font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]"
+        >
+          Trim a clip →
+        </a>
+      </div>
     </div>
   </main>
 

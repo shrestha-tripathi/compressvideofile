@@ -32,11 +32,11 @@ export const site = {
    * doesn't truncate in Google SERPs.
    */
   tagline:
-    env.PUBLIC_SITE_TAGLINE ?? "Compress video in your browser — no upload",
+    env.PUBLIC_SITE_TAGLINE ?? "Compress & trim video in your browser — no upload",
   /** One-sentence description for <meta description> + OG. */
   description:
     env.PUBLIC_SITE_DESCRIPTION ??
-    "Free online video compressor that works 100% in your browser. Shrink MP4, MOV, WebM files for WhatsApp, email or Discord — your video never leaves your device. No upload, no watermark, no signup.",
+    "Free online video and audio compressor that works 100% in your browser. Shrink MP4, MOV, WebM, MP3 and M4A files for WhatsApp, email or Discord, or trim them to an exact start and end time — your file never leaves your device. No upload, no watermark, no signup.",
   /** Bare domain (no protocol), e.g. for display + sitemap. */
   domain,
   /** Canonical site origin (protocol + domain, no trailing slash). */

@@ -22,6 +22,8 @@ const columns: FooterColumn[] = [
     title: "Product",
     links: [
       { href: "/app/", label: "Compress a video" },
+      { href: "/app/?mode=audio", label: "Compress audio" },
+      { href: "/trim/", label: "Trim video & audio" },
       { href: "/how-it-works/", label: "How it works" },
       { href: "/faq/", label: "FAQ" },
     ],
@@ -75,7 +77,7 @@ const columns: FooterColumn[] = [
           <span>{site.shortName}</span>
         </a>
         <p class="mt-3 text-sm leading-relaxed text-[var(--color-fg-muted)]">
-          Compress video right in your browser. Your files never leave your
+          Compress and trim video &amp; audio right in your browser. Your files never leave your
           device — no upload, no signup, no watermark.
         </p>
       </div>

@@ -30,6 +30,22 @@ const faqs = [
     a: `Compression always trades some quality for a smaller size, but you stay in control. A larger target size keeps more detail; a small target (like the 16 MB WhatsApp preset on a long clip) trades more. For most short clips the difference is barely noticeable. You can also lower the resolution (e.g. 1080p → 720p) to spend the bitrate more efficiently.`,
   },
   {
+    q: `Can I compress an MP3 or an audio file?`,
+    a: `Yes. Switch to the Audio tab and drop in an MP3, M4A, AAC, WAV, FLAC, OGG or Opus file — including WhatsApp voice notes. Instead of a target size you pick a bitrate: 192 or 128 kbps for music, 64 kbps for speech. The output is MP3 (plays everywhere) or M4A/AAC (smaller at the same quality). Like video, it's all processed on your device and never uploaded.`,
+  },
+  {
+    q: `Can I trim a video or audio file?`,
+    a: `Yes, two ways. The compressor has an optional “Trim” panel where you set a start and end time before compressing. Or use the dedicated trim tool, which cuts without compressing — scrub the preview, hit “Playhead” to drop each marker, and download. Both accept times as mm:ss or hh:mm:ss.`,
+  },
+  {
+    q: `Does trimming lose quality?`,
+    a: `Not in fast mode. Cutting a file doesn't inherently require re-encoding it — the audio and video streams can simply be copied into a new container between two points, which is why a large clip trims in about a second and comes out identical to the original. Precise mode does re-encode, so it's frame-exact but slightly lossy, like any re-encode.`,
+  },
+  {
+    q: `Why did my trimmed video start earlier than I asked?`,
+    a: `That's the keyframe snap. A lossless stream copy can only begin cutting at a keyframe, and video files only place keyframes every few seconds — so if your start time falls between two of them, the cut begins at the previous one and you get a slightly longer clip. The tool tells you when this happens. Switch to Precise mode for a cut that lands exactly where you asked.`,
+  },
+  {
     q: `What video formats are supported?`,
     a: `You can drop in MP4, MOV (iPhone), WebM, MKV, AVI, and most common formats. The output is always H.264 MP4 with AAC audio and +faststart, which plays everywhere — phones, browsers, WhatsApp, email, Discord — and starts playing before it finishes downloading.`,
   },
