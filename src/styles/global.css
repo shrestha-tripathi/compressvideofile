@@ -267,3 +267,19 @@ a {
 .cvf-seg-btn svg {
   flex-shrink: 0;
 }
+
+/* ============================================================
+   Disabled primary action (invalid trim range)
+   ============================================================
+   NOT opacity on the accent background — white text on a faded accent is the
+   lowest-contrast thing on the page (flagged in visual QA). Instead swap to
+   real muted surface + muted foreground tokens, which stay legible in BOTH
+   themes because both token sets define them.
+*/
+.is-disabled {
+  background-color: var(--color-bg-muted) !important;
+  color: var(--color-fg-subtle) !important;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}

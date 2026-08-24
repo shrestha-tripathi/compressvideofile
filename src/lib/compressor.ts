@@ -295,8 +295,7 @@ export function initCompressor(): void {
     const ok = readTrim();
     if (compressBtn) {
       (compressBtn as HTMLButtonElement).disabled = !ok;
-      compressBtn.classList.toggle("opacity-50", !ok);
-      compressBtn.classList.toggle("pointer-events-none", !ok);
+      compressBtn.classList.toggle("is-disabled", !ok);
     }
     updateTrimInfo();
     updateEstimate();
@@ -552,7 +551,7 @@ export function initCompressor(): void {
     updateTrimInfo();
     if (compressBtn) {
       (compressBtn as HTMLButtonElement).disabled = false;
-      compressBtn.classList.remove("opacity-50", "pointer-events-none");
+      compressBtn.classList.remove("is-disabled");
     }
     if (resultVideo) resultVideo.removeAttribute("src");
     if (resultAudio) resultAudio.removeAttribute("src");

@@ -1,0 +1,298 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import { site } from "../site.config";
+
+/**
+ * /trim — the standalone cut tool.
+ *
+ * Deliberately its own indexable page rather than a mode inside /app: "trim
+ * video online" / "cut mp3 online" is a different keyword cluster and can't be
+ * won from a page whose H1 says "Compress a video". The ENGINE is shared
+ * (src/lib/ffmpeg-engine.ts) — only the controller differs.
+ *
+ * CSS contract is `.cvt-*`, but it deliberately REUSES the existing .cvf-*
+ * dropzone / progress / spinner / segmented-control classes rather than
+ * duplicating them, so there's exactly one place to fix theming.
+ */
+
+const webAppSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "@id": `${site.url}/trim#webapp`,
+  name: "Trim Video & Audio",
+  alternateName: [
+    "Trim video online",
+    "Cut video online",
+    "Trim audio online",
+    "Cut MP3 online",
+    "Video trimmer",
+    "Audio trimmer",
+  ],
+  url: `${site.url}/trim/`,
+  description:
+    "Trim video and audio in your browser with custom start and end timestamps. The fast mode cuts without re-encoding, so there's no quality loss — and your file is never uploaded.",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Any (Chrome, Edge, Firefox, Safari)",
+  browserRequirements: "Requires a modern browser with WebAssembly support",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  featureList: [
+    "Trim video and audio 100% in your browser — never uploaded",
+    "Custom start and end timestamps",
+    "Lossless fast mode — cuts without re-encoding",
+    "Frame-exact precise mode",
+    "No watermark, no signup, no install",
+  ],
+  publisher: { "@id": `${site.url}/#organization` },
+};
+---
+
+<Layout
+  title="Trim Video & Audio Online — No Upload, No Re-encode"
+  description="Cut a video or audio file to an exact start and end time, right in your browser. The fast mode copies the streams instead of re-encoding, so there's zero quality loss. Your file never uploads."
+  path="/trim/"
+  jsonLd={[webAppSchema]}
+>
+  <Header />
+
+  <main class="mx-auto max-w-[920px] px-4 md:px-8 py-8 md:py-10">
+    <header class="mb-5 text-center">
+      <h1 id="cvt-app-title" class="text-2xl md:text-3xl font-semibold tracking-tight">Trim a video</h1>
+      <p id="cvt-app-sub" class="mt-2 text-sm md:text-base text-[var(--color-fg-muted)]">
+        Cut a video to an exact start and end time.
+        <span class="text-[var(--color-fg)] font-medium">Nothing is uploaded</span> —
+        and the fast mode doesn't re-encode, so there's no quality loss.
+      </p>
+    </header>
+
+    {/* ============ MODE TABS (Video / Audio) ============ */}
+    <div class="mb-6 flex justify-center">
+      <div class="cvf-seg" role="tablist" aria-label="Choose what to trim">
+        <button id="cvt-tab-video" type="button" role="tab" aria-selected="true" class="cvf-seg-btn is-active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 8-6 4 6 4V8Z"></path><rect width="14" height="12" x="2" y="6" rx="2"></rect></svg>
+          Video
+        </button>
+        <button id="cvt-tab-audio" type="button" role="tab" aria-selected="false" class="cvf-seg-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          Audio
+        </button>
+      </div>
+    </div>
+
+    {/* ============ INTRO / dropzone ============ */}
+    <section id="cvt-intro">
+      <div
+        id="cvt-dropzone"
+        class="cvf-dropzone flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl px-6 py-14 text-center"
+        role="button"
+        tabindex="0"
+        aria-label="Choose or drop a file"
+      >
+        <span
+          class="inline-flex size-12 items-center justify-center rounded-full text-[var(--color-accent)]"
+          style="background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);"
+          aria-hidden="true"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+        </span>
+        <div>
+          <p id="cvt-dz-title" class="text-base font-semibold text-[var(--color-fg)]">Drop a video here</p>
+          <p class="mt-1 text-sm text-[var(--color-fg-muted)]">or</p>
+        </div>
+        <button id="cvt-pick" type="button" class="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90">
+          <span id="cvt-pick-label">Choose a video</span>
+        </button>
+        <p id="cvt-dz-formats" class="mt-1 text-xs text-[var(--color-fg-subtle)]">MP4, MOV, WebM, MKV, AVI · nothing is uploaded</p>
+        <input id="cvt-file" type="file" accept="video/*" class="sr-only" aria-hidden="true" tabindex="-1" />
+      </div>
+
+      <p class="mt-4 text-center text-xs text-[var(--color-fg-subtle)]">
+        Processed on your device with WebAssembly. The only thing fetched from the
+        network is the engine itself — never your file.
+      </p>
+    </section>
+
+    {/* ============ SETUP ============ */}
+    <section id="cvt-setup" class="hidden">
+      <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-4 md:p-5">
+        <p id="cvt-orig-name" class="truncate text-sm font-semibold text-[var(--color-fg)]">clip.mp4</p>
+        <p id="cvt-orig-meta" class="mt-0.5 text-xs text-[var(--color-fg-muted)]">—</p>
+      </div>
+
+      {/* Preview is the PRIMARY control here (unlike /app, where it's optional),
+          so it gets full width and a generous max height. */}
+      <div class="mt-5">
+        <video id="cvt-preview-video" controls playsinline preload="metadata" class="max-h-[420px] w-full rounded-lg bg-black"></video>
+        <audio id="cvt-preview-audio" controls preload="metadata" class="hidden w-full"></audio>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="cvt-start" class="block text-xs font-medium text-[var(--color-fg-muted)]">Start</label>
+          <div class="mt-2 flex gap-2">
+            <input id="cvt-start" type="text" inputmode="numeric" placeholder="0:00"
+              class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm tabular-nums text-[var(--color-fg)] outline-none focus:border-[var(--color-accent)]" />
+            <button id="cvt-set-start" type="button" class="shrink-0 rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+              Playhead
+            </button>
+          </div>
+        </div>
+        <div>
+          <label for="cvt-end" class="block text-xs font-medium text-[var(--color-fg-muted)]">End</label>
+          <div class="mt-2 flex gap-2">
+            <input id="cvt-end" type="text" inputmode="numeric" placeholder="0:30"
+              class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm tabular-nums text-[var(--color-fg)] outline-none focus:border-[var(--color-accent)]" />
+            <button id="cvt-set-end" type="button" class="shrink-0 rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+              Playhead
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="cvt-chips" class="mt-4 flex flex-wrap gap-2">
+        {[
+          { key: "first30", label: "First 30s" },
+          { key: "last30", label: "Last 30s" },
+          { key: "middle", label: "Middle" },
+          { key: "full", label: "Full length" },
+        ].map((c) => (
+          <button
+            type="button"
+            data-range={c.key}
+            class="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-fg)]"
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      <p id="cvt-info" class="mt-4 text-sm text-[var(--color-fg-muted)]"></p>
+      <p id="cvt-error" class="mt-2 hidden rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-xs text-[var(--color-warning)]"></p>
+
+      {/* Quality toggle — video only. Audio stream copies are effectively
+          sample-accurate, so there's no trade-off to expose there. */}
+      <div id="cvt-quality-wrap" class="mt-6">
+        <h2 class="text-sm font-semibold text-[var(--color-fg)]">Trim quality</h2>
+        <div class="cvf-seg mt-3" role="tablist" aria-label="Trim quality">
+          <button id="cvt-q-fast" type="button" role="tab" aria-selected="true" class="cvf-seg-btn is-active">
+            Fast (lossless)
+          </button>
+          <button id="cvt-q-precise" type="button" role="tab" aria-selected="false" class="cvf-seg-btn">
+            Precise (re-encode)
+          </button>
+        </div>
+        <p id="cvt-quality-note" class="mt-2 text-xs text-[var(--color-fg-subtle)]"></p>
+      </div>
+
+      <div class="mt-6 flex flex-wrap items-center gap-3">
+        <button id="cvt-trim" type="button" class="rounded-lg bg-[var(--color-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90">
+          Trim video
+        </button>
+        <button id="cvt-again" type="button" class="rounded-lg border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+          Choose a different file
+        </button>
+      </div>
+    </section>
+
+    {/* ============ WORKING ============ */}
+    <section id="cvt-working" class="hidden">
+      <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-6 md:p-8">
+        <div class="flex items-center gap-3">
+          <span class="cvf-spinner" aria-hidden="true"></span>
+          <p class="text-sm font-semibold text-[var(--color-fg)]">Trimming…</p>
+          <span id="cvt-progress-pct" class="ml-auto text-sm font-semibold tabular-nums text-[var(--color-accent-strong)]"></span>
+        </div>
+        <div class="cvf-progress-track mt-4"><div id="cvt-progress" class="cvf-progress-fill is-indeterminate"></div></div>
+        <p id="cvt-work-status" class="mt-3 text-xs text-[var(--color-fg-muted)]">Starting…</p>
+        <button id="cvt-cancel" type="button" class="mt-5 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+          Cancel
+        </button>
+      </div>
+    </section>
+
+    {/* ============ RESULT ============ */}
+    <section id="cvt-result" class="hidden">
+      <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5 md:p-6">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-fg-subtle)]">Done</p>
+            {/* A trim's headline stat is DURATION, not size. */}
+            <p id="cvt-result-len" class="mt-1 text-3xl font-bold tracking-tight text-[var(--color-success)]">—</p>
+            <p class="mt-1 text-sm text-[var(--color-fg-muted)]">
+              <span id="cvt-size-before" class="line-through">—</span>
+              <span class="mx-1.5">→</span>
+              <span id="cvt-size-after" class="font-semibold text-[var(--color-fg)]">—</span>
+            </p>
+          </div>
+          <a id="cvt-download" class="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-accent-fg)] transition-opacity hover:opacity-90" download>
+            Download
+          </a>
+        </div>
+
+        <video id="cvt-result-video" controls playsinline class="mt-5 max-h-[420px] w-full rounded-lg bg-black"></video>
+        <audio id="cvt-result-audio" controls class="mt-5 hidden w-full"></audio>
+
+        <p id="cvt-result-hint" class="mt-4 text-sm text-[var(--color-fg-muted)]"></p>
+
+        <div class="mt-5 flex flex-wrap gap-3">
+          <button id="cvt-again2" type="button" class="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+            Trim another file
+          </button>
+          {/* Handoff is download-then-upload for now: /trim and /app are separate
+              documents, so an in-memory blob can't survive the navigation. A
+              real handoff needs OPFS — tracked as a follow-up. */}
+          <a href="/app/" class="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]">
+            Download it, then compress it →
+          </a>
+        </div>
+      </div>
+      <p class="mt-4 text-center text-xs text-[var(--color-fg-subtle)]">
+        Your file was processed entirely on your device. It was never uploaded.
+      </p>
+    </section>
+
+    {/* ============ SEO copy ============ */}
+    <section class="mt-16 border-t border-[var(--color-border)] pt-10">
+      <h2 class="text-xl font-semibold tracking-tight">How trimming in your browser works</h2>
+      <div class="mt-4 space-y-4 text-sm leading-relaxed text-[var(--color-fg-muted)]">
+        <p>
+          Most online video trimmers upload your file to a server, cut it there,
+          and hand you back a download. This one doesn't. The trimmer runs as
+          WebAssembly inside your browser tab, so your video or audio is read
+          straight off your disk and never travels anywhere.
+        </p>
+        <p>
+          <strong class="text-[var(--color-fg)]">Fast mode is lossless.</strong>
+          Cutting a file doesn't inherently require re-encoding it — the streams
+          can simply be copied into a new container between two points. That's
+          what fast mode does, which is why a 500&nbsp;MB clip trims in about a
+          second and comes out pixel-identical to the original. The one trade-off
+          is that a stream copy can only cut on a keyframe, so the actual start
+          may land a second or two before the time you asked for.
+        </p>
+        <p>
+          <strong class="text-[var(--color-fg)]">Precise mode is frame-exact.</strong>
+          When the cut has to land on an exact frame, precise mode re-encodes the
+          video with H.264 at a high quality setting. It's slower and, like any
+          re-encode, technically lossy — but the cut is exactly where you put it.
+        </p>
+        <p>
+          Audio files always use the lossless path: audio frames are short enough
+          that a stream copy is effectively sample-accurate, so there's no
+          trade-off to make.
+        </p>
+        <p>
+          Need a smaller file rather than a shorter one? The
+          <a href="/app/" class="text-[var(--color-accent)] hover:underline">compressor</a>
+          targets a specific file size for WhatsApp, email or Discord — and it can
+          trim at the same time.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    import { initTrimmer } from "../lib/trimmer";
+    initTrimmer();
+  </script>
+</Layout>

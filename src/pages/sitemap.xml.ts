@@ -12,7 +12,7 @@ import { site } from "../site.config";
  *
  * Priority guide:
  *   1.0  — homepage (primary entry point)
- *   0.9  — /app (the compressor — the money/conversion page)
+ *   0.9  — /app (the compressor) and /trim (the trimmer) — the tool pages
  *   0.7  — how-it-works, faq, about (primary content)
  *   0.5  — contact (technical)
  *   0.3  — privacy, terms (legal — trust signals, not SEO targets)
@@ -23,6 +23,7 @@ export const GET: APIRoute = async () => {
   const pages = [
     { path: "/", priority: "1.0", changefreq: "weekly" },
     { path: "/app/", priority: "0.9", changefreq: "weekly" },
+    { path: "/trim/", priority: "0.9", changefreq: "weekly" },
     { path: "/how-it-works/", priority: "0.7", changefreq: "monthly" },
     { path: "/faq/", priority: "0.7", changefreq: "monthly" },
     { path: "/about/", priority: "0.7", changefreq: "monthly" },
