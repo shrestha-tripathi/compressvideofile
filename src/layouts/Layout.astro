@@ -66,8 +66,16 @@ const websiteSchema = {
 // wiring is needed (DRY — one edit covers all routes). Skipped on the homepage
 // (no title) where a single-item breadcrumb would be noise. Gives Google a
 // breadcrumb trail under the SERP title on every interior page.
+// Dedup guard: if the page already supplied its own BreadcrumbList via the
+// jsonLd prop, do NOT emit a second one — duplicate BreadcrumbList markup is
+// worse for SEO than none. Also skipped on noindex routes (e.g. /404), where a
+// breadcrumb trail on an unindexable page is meaningless and risks a soft-404.
+const pageSuppliesBreadcrumb = jsonLd.some(
+  (schema) => schema?.["@type"] === "BreadcrumbList",
+);
+
 const breadcrumbSchema =
-  title && canonicalPath !== "/"
+  title && canonicalPath !== "/" && !noindex && !pageSuppliesBreadcrumb
     ? {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
