@@ -33,9 +33,14 @@ const webAppSchema = {
   description:
     "Trim video and audio in your browser with custom start and end timestamps. The fast mode cuts without re-encoding, so there's no quality loss — and your file is never uploaded.",
   applicationCategory: "MultimediaApplication",
-  operatingSystem: "Any (Chrome, Edge, Firefox, Safari)",
+  operatingSystem: "Any (web browser)",
   browserRequirements: "Requires a modern browser with WebAssembly support",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  isAccessibleForFree: true,
+  dateModified: site.lastUpdated,
+  offers: [
+    { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    { "@type": "Offer", price: "0", priceCurrency: "INR" },
+  ],
   featureList: [
     "Trim video and audio 100% in your browser — never uploaded",
     "Custom start and end timestamps",

@@ -47,6 +47,12 @@ const orgSchema = {
   url: site.url,
   logo: logoUrl,
   description: site.description,
+  parentOrganization: {
+    "@type": "Organization",
+    "@id": `${site.publisherUrl}/#organization`,
+    name: site.publisherName,
+    url: site.publisherUrl,
+  },
 };
 
 // Sitewide WebSite — sitelinks search-box eligibility + identity.
