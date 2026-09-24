@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { site } from "../site.config";
+import { pseo } from "../data/pseo";
 
 /**
  * Dynamic sitemap — hand-maintained static route list (small site, low churn,
@@ -30,6 +31,8 @@ export const GET: APIRoute = async () => {
     { path: "/contact/", priority: "0.5", changefreq: "yearly" },
     { path: "/privacy/", priority: "0.3", changefreq: "yearly" },
     { path: "/terms/", priority: "0.3", changefreq: "yearly" },
+    { path: "/guides/", priority: "0.7", changefreq: "monthly" },
+    ...pseo.map((e) => ({ path: `/guides/${e.slug}/`, priority: "0.6", changefreq: "monthly" })),
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

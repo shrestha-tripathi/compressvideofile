@@ -69,7 +69,7 @@ const PRESET_IDS = ["wa", "wahd", "email", "discord", "nitro"] as const;
 export const compressVideoTool: WebMcpTool = {
   name: "compress_video",
   description:
-    "Compress the video loaded in this page's compressor to a target size, entirely in the user's browser (no upload). Use a preset (wa=WhatsApp 16 MB, wahd=WhatsApp document 64 MB, email=25 MB, discord=25 MB, nitro=500 MB) or targetMB (2–500). If no video is loaded yet, this opens the file picker and the user must choose a file, then call again.",
+    "Compress the video loaded in this page's compressor to a target size, entirely in the user's browser (no upload). Use a preset (wa=WhatsApp 16 MB, wahd=WhatsApp document 64 MB, email=25 MB, discord=10 MB (free upload limit), nitro=500 MB) or targetMB (2–500). If no video is loaded yet, this opens the file picker and the user must choose a file, then call again.",
   inputSchema: {
     type: "object",
     properties: {

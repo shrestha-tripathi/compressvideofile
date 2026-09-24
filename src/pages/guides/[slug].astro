@@ -1,0 +1,105 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import { site, absoluteUrl, lastUpdatedLabel } from "../../site.config";
+import { pseo, pseoBySlug, type PseoEntry } from "../../data/pseo";
+
+export function getStaticPaths() {
+  return pseo.map((entry) => ({ params: { slug: entry.slug }, props: { entry } }));
+}
+
+const { entry } = Astro.props as { entry: PseoEntry };
+const path = `/guides/${entry.slug}`;
+const related = entry.related.map((s) => pseoBySlug.get(s)).filter(Boolean) as PseoEntry[];
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: entry.faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+const howToSchema = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: entry.h1,
+  description: entry.metaDescription,
+  tool: [{ "@type": "HowToTool", name: site.name }],
+  estimatedCost: { "@type": "MonetaryAmount", currency: "USD", value: "0" },
+  step: entry.steps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, text: s })),
+};
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+    { "@type": "ListItem", position: 2, name: "Guides", item: absoluteUrl("/guides") },
+    { "@type": "ListItem", position: 3, name: entry.h1, item: absoluteUrl(path) },
+  ],
+};
+---
+
+<Layout title={entry.title} description={entry.metaDescription} path={path} jsonLd={[faqSchema, howToSchema, breadcrumbSchema]}>
+  <Header />
+  <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+    <nav class="text-sm text-[var(--color-fg-subtle)]" aria-label="Breadcrumb">
+      <a href="/" class="hover:text-[var(--color-fg)]">Home</a>
+      <span class="px-1.5">/</span>
+      <a href="/guides/" class="hover:text-[var(--color-fg)]">Guides</a>
+      <span class="px-1.5">/</span>
+      <span class="text-[var(--color-fg-muted)]">{entry.h1}</span>
+    </nav>
+
+    <header class="mt-6">
+      <h1 class="text-4xl font-bold tracking-tight sm:text-5xl">{entry.h1}</h1>
+      <p class="mt-4 text-lg text-[var(--color-fg-muted)]">{entry.intro}</p>
+      <p class="mt-3 text-sm text-[var(--color-fg-subtle)]">Last updated {lastUpdatedLabel}</p>
+      <a href={`/app/${entry.cta}`} class="mt-6 inline-flex items-center rounded-lg bg-[var(--color-accent)] px-5 py-3 font-semibold text-[var(--color-accent-fg)] hover:opacity-90">
+        {entry.ctaLabel} →
+      </a>
+    </header>
+
+
+    <section class="mt-10">
+      <h2 class="text-2xl font-bold">How to do it</h2>
+      <ol class="mt-4 list-decimal space-y-2 pl-6 text-[var(--color-fg-muted)]">
+        {entry.steps.map((s) => <li>{s}</li>)}
+      </ol>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-2xl font-bold">Tips</h2>
+      <ul class="mt-4 list-disc space-y-2 pl-6 text-[var(--color-fg-muted)]">
+        {entry.tips.map((t) => <li>{t}</li>)}
+      </ul>
+    </section>
+
+    <section class="mt-10">
+      <h2 class="text-2xl font-bold">FAQ</h2>
+      <div class="mt-4 space-y-4">
+        {entry.faqs.map((f) => (
+          <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5">
+            <h3 class="font-semibold text-[var(--color-fg)]">{f.q}</h3>
+            <p class="mt-2 text-[var(--color-fg-muted)]">{f.a}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {related.length > 0 && (
+      <section class="mt-10">
+        <h2 class="text-2xl font-bold">Related guides</h2>
+        <ul class="mt-4 space-y-2">
+          {related.map((r) => (
+            <li><a href={`/guides/${r.slug}/`} class="text-[var(--color-accent)] hover:underline">{r.h1}</a></li>
+          ))}
+        </ul>
+        <p class="mt-4 text-sm"><a href="/guides/" class="text-[var(--color-accent)] hover:underline">All guides</a></p>
+      </section>
+    )}
+  </main>
+  <Footer />
+</Layout>
