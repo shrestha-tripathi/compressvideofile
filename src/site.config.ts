@@ -61,7 +61,23 @@ export const site = {
    * for forks/self-hosts).
    */
   gaId: env.PUBLIC_GA_MEASUREMENT_ID ?? "G-BX5CYJVWMK",
+
+  /**
+   * Content freshness — ONE constant drives the visible "Last updated" line on
+   * landing pages AND `dateModified` in JSON-LD. Bump when content changes.
+   */
+  lastUpdated: "2026-09-24",
+
+  /** Umbrella publisher (the worksoffline family of offline-first tools). */
+  publisherName: "WorksOffline",
+  publisherUrl: "https://worksoffline.in",
 } as const;
+
+/** "September 2026" — human form of site.lastUpdated for visible copy. */
+export const lastUpdatedLabel = new Date(`${site.lastUpdated}T00:00:00Z`).toLocaleDateString(
+  "en-US",
+  { month: "long", year: "numeric", timeZone: "UTC" },
+);
 
 export type SiteConfig = typeof site;
 

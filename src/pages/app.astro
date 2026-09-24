@@ -1,7 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
-import { site } from "../site.config";
+import { site, lastUpdatedLabel } from "../site.config";
+import TldrBlock from "../components/TldrBlock.astro";
 
 const webAppSchema = {
   "@context": "https://schema.org",
@@ -10,8 +11,13 @@ const webAppSchema = {
   name: site.name,
   url: `${site.url}/app/`,
   applicationCategory: "MultimediaApplication",
-  operatingSystem: "Any (Chrome, Edge, Firefox, Safari)",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  operatingSystem: "Any (web browser)",
+  isAccessibleForFree: true,
+  dateModified: site.lastUpdated,
+  offers: [
+    { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    { "@type": "Offer", price: "0", priceCurrency: "INR" },
+  ],
   publisher: { "@id": `${site.url}/#organization` },
 };
 ---
@@ -32,6 +38,8 @@ const webAppSchema = {
         <span class="text-[var(--color-fg)] font-medium">Your video never uploads</span> —
         it's compressed right here on your device.
       </p>
+      <TldrBlock class="mx-auto mt-4 max-w-2xl text-left" />
+      <p class="mt-2 text-sm text-[var(--color-fg-subtle)]">Last updated {lastUpdatedLabel}</p>
     </header>
 
     {/* ============ MODE TABS (Video / Audio) ============ */}

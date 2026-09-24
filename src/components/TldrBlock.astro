@@ -1,0 +1,26 @@
+---
+/**
+ * Answer-first TL;DR (GEO). 40–60 words: what it does, free, in-browser,
+ * key limit. Kept factual — processing really is local (ffmpeg.wasm); only
+ * the wasm binary is fetched from a CDN.
+ */
+import { site } from "../site.config";
+interface Props {
+  class?: string;
+}
+const { class: cls = "" } = Astro.props;
+---
+
+<aside
+  class={`rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-5 py-4 ${cls}`}
+  aria-label="TL;DR"
+>
+  <p class="text-sm leading-relaxed text-[var(--color-fg-muted)]">
+    <strong class="font-semibold text-[var(--color-fg)]">TL;DR:</strong>
+    {site.name} is a free video and audio compressor that runs entirely in your
+    browser using ffmpeg compiled to WebAssembly. Pick a target size (e.g. 16 MB
+    for WhatsApp, 25 MB for Gmail), and it outputs an H.264 MP4 without
+    uploading your file. The main limit: very large or long videos are bounded
+    by your device's memory and encode slower than desktop software.
+  </p>
+</aside>
