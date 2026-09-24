@@ -41,7 +41,7 @@ const PRESETS: PresetDef[] = [
   { id: "wa", label: "WhatsApp", sub: "16 MB", targetMB: 16 },
   { id: "wahd", label: "WhatsApp HD", sub: "64 MB doc", targetMB: 64 },
   { id: "email", label: "Email", sub: "25 MB", targetMB: 25 },
-  { id: "discord", label: "Discord", sub: "25 MB", targetMB: 25 },
+  { id: "discord", label: "Discord", sub: "10 MB", targetMB: 10 },
   { id: "nitro", label: "Discord Nitro", sub: "500 MB", targetMB: 500 },
 ];
 
@@ -747,9 +747,22 @@ export function initCompressor(): void {
   // defaults
   // Deep link: /app/?mode=audio starts on the Audio tab (used by the homepage
   // "Compress audio" CTA and any audio-targeted landing copy).
-  const wantAudio = new URLSearchParams(location.search).get("mode") === "audio";
+  const qs = new URLSearchParams(location.search);
+  const wantAudio = qs.get("mode") === "audio";
   if (wantAudio) mode = "audio";
   applyModeCopy();
-  selectPreset("email");
+  // Deep links from the guide pages: ?preset=wa|wahd|email|discord|nitro,
+  // ?mb=<2-500> (custom target), ?res=keep|1080|720|480.
+  const qPreset = qs.get("preset");
+  selectPreset(qPreset && PRESETS.some((p) => p.id === qPreset) ? qPreset : "email");
+  const qMb = Number(qs.get("mb"));
+  if (!qPreset && customRange && Number.isFinite(qMb) && qMb >= 2 && qMb <= 500) {
+    customRange.value = String(Math.round(qMb));
+    customRange.dispatchEvent(new Event("input"));
+  }
+  const qRes = qs.get("res");
+  if (qRes && resSelect && [...resSelect.options].some((o) => o.value === qRes)) {
+    resSelect.value = qRes;
+  }
   selectAudioPreset("128");
 }
