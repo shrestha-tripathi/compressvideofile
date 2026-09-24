@@ -299,5 +299,7 @@ const webAppSchema = {
   <script>
     import { initTrimmer } from "../lib/trimmer";
     initTrimmer();
+    import { registerWebMcp, trimVideoTool } from "../lib/webmcp";
+    registerWebMcp([trimVideoTool]);
   </script>
 </Layout>

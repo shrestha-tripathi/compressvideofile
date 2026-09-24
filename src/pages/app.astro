@@ -266,5 +266,7 @@ const webAppSchema = {
   <script>
     import { initCompressor } from "../lib/compressor";
     initCompressor();
+    import { registerWebMcp, compressVideoTool } from "../lib/webmcp";
+    registerWebMcp([compressVideoTool]);
   </script>
 </Layout>
