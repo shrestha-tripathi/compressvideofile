@@ -56,4 +56,8 @@ export const faqs: { q: string; a: string }[] = [
     q: `Can I choose the exact output size?`,
     a: `Yes. Besides the purpose presets (WhatsApp, Email, Discord, Discord Nitro), there's a custom target-size slider so you can aim for an exact number of megabytes, plus a resolution selector (Keep / 1080p / 720p / 480p). We compute the matching video bitrate and warn you if a target is implausibly small for the clip's length.`,
   },
+  {
+    q: `Can AI agents use it? (WebMCP)`,
+    a: `Yes — it's AI agent ready (WebMCP). In browsers that support the WebMCP draft (navigator.modelContext), the compressor page exposes a compress_video tool (target size or preset) and the trim page exposes a trim_video tool (start, end, fast or precise). They simply drive the same on-page controls you use, so the file is still processed on your device and never uploaded. In other browsers nothing changes.`,
+  },
 ];
